@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ciZagoni>
+    <zagon id="ci1" projektId="p1">
+        <status>success</status>
+        <trajanjeSekund>120</trajanjeSekund>
+        <datumZakljucka>2026-10-10</datumZakljucka>
+    </zagon>
+    <zagon id="ci2" projektId="p2">
+        <status>failure</status>
+        <trajanjeSekund>240</trajanjeSekund>
+        <datumZakljucka>2026-10-08</datumZakljucka>
+    </zagon>
+    <zagon id="ci3" projektId="p3">
+        <status>failure</status>
+        <trajanjeSekund>180</trajanjeSekund>
+        <datumZakljucka>2026-10-07</datumZakljucka>
+    </zagon>
+    <zagon id="ci4" projektId="p4">
+        <status>success</status>
+        <trajanjeSekund>95</trajanjeSekund>
+        <datumZakljucka>2026-10-06</datumZakljucka>
+    </zagon>
+    <zagon id="ci5" projektId="p5">
+        <status>success</status>
+        <trajanjeSekund>130</trajanjeSekund>
+        <datumZakljucka>2026-10-05</datumZakljucka>
+    </zagon>
+    <zagon id="ci6" projektId="p6">
+        <status>success</status>
+        <trajanjeSekund>80</trajanjeSekund>
+        <datumZakljucka>2026-10-04</datumZakljucka>
+    </zagon>
+    <zagon id="ci7" projektId="p7">
+        <status>failure</status>
+        <trajanjeSekund>310</trajanjeSekund>
+        <datumZakljucka>2026-10-03</datumZakljucka>
+    </zagon>
+    <zagon id="ci8" projektId="p8">
+        <status>success</status>
+        <trajanjeSekund>105</trajanjeSekund>
+        <datumZakljucka>2026-10-02</datumZakljucka>
+    </zagon>
+    <zagon id="ci9" projektId="p9">
+        <status>pending</status>
+        <trajanjeSekund>0</trajanjeSekund>
+        <datumZakljucka></datumZakljucka>
+    </zagon>
+    <zagon id="ci10" projektId="p10">
+        <status>failure</status>
+        <trajanjeSekund>200</trajanjeSekund>
+        <datumZakljucka>2026-09-30</datumZakljucka>
+    </zagon>
+</ciZagoni>

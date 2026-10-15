@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projekti>
+    <projekt id="p1">
+        <ime>DevPulse</ime>
+        <repozitorij>bagii/devpulse</repozitorij>
+        <jezik>Go</jezik>
+        <datumZadnjeSpremembe>2026-10-10</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p2">
+        <ime>TaskFlow</ime>
+        <repozitorij>demo/taskflow</repozitorij>
+        <jezik>Python</jezik>
+        <datumZadnjeSpremembe>2026-10-08</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p3">
+        <ime>ShopAPI</ime>
+        <repozitorij>demo/shopapi</repozitorij>
+        <jezik>JavaScript</jezik>
+        <datumZadnjeSpremembe>2026-10-07</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p4">
+        <ime>CloudNotes</ime>
+        <repozitorij>demo/cloudnotes</repozitorij>
+        <jezik>TypeScript</jezik>
+        <datumZadnjeSpremembe>2026-10-06</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p5">
+        <ime>WeatherHub</ime>
+        <repozitorij>demo/weatherhub</repozitorij>
+        <jezik>Python</jezik>
+        <datumZadnjeSpremembe>2026-10-05</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p6">
+        <ime>AuthCore</ime>
+        <repozitorij>demo/authcore</repozitorij>
+        <jezik>Go</jezik>
+        <datumZadnjeSpremembe>2026-10-04</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p7">
+        <ime>DataSync</ime>
+        <repozitorij>demo/datasync</repozitorij>
+        <jezik>Java</jezik>
+        <datumZadnjeSpremembe>2026-10-03</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p8">
+        <ime>BlogEngine</ime>
+        <repozitorij>demo/blogengine</repozitorij>
+        <jezik>PHP</jezik>
+        <datumZadnjeSpremembe>2026-10-02</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p9">
+        <ime>FileManager</ime>
+        <repozitorij>demo/filemanager</repozitorij>
+        <jezik>Rust</jezik>
+        <datumZadnjeSpremembe>2026-10-01</datumZadnjeSpremembe>
+    </projekt>
+    <projekt id="p10">
+        <ime>ChatServer</ime>
+        <repozitorij>demo/chatserver</repozitorij>
+        <jezik>Go</jezik>
+        <datumZadnjeSpremembe>2026-09-30</datumZadnjeSpremembe>
+    </projekt>
+</projekti>

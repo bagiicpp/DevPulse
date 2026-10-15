@@ -1,0 +1,19 @@
+[
+    {
+        "id": "p9",
+        "ime": "FileManager",
+        "repozitorij": "demo/filemanager",
+        "jezik": "Rust",
+        "datum": "2026-10-01",
+        "ci": {
+            "status": "pending",
+            "trajanje": 0,
+            "datum": null
+        },
+        "kakovost": {
+            "pokritost": null,
+            "napake": 0,
+            "qualityGate": "NONE"
+        }
+    }
+]

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<projekti>
+    <projekt id="p9">
+        <ime>FileManager</ime>
+        <repozitorij>demo/filemanager</repozitorij>
+        <jezik>Rust</jezik>
+        <datum>2026-10-01</datum>
+        <ci>
+            <status>pending</status>
+            <trajanje>0</trajanje>
+            <datum />
+        </ci>
+        <kakovost>
+            <pokritost />
+            <napake>0</napake>
+            <qualityGate>NONE</qualityGate>
+        </kakovost>
+    </projekt>
+</projekti>

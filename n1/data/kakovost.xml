@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<porocila>
+    <porocilo id="q1" projektId="p1">
+        <pokritost>92</pokritost>
+        <napake>2</napake>
+        <qualityGate>OK</qualityGate>
+    </porocilo>
+    <porocilo id="q2" projektId="p2">
+        <pokritost>74</pokritost>
+        <napake>12</napake>
+        <qualityGate>ERROR</qualityGate>
+    </porocilo>
+    <porocilo id="q3" projektId="p3">
+        <pokritost>65</pokritost>
+        <napake>20</napake>
+        <qualityGate>ERROR</qualityGate>
+    </porocilo>
+    <porocilo id="q4" projektId="p4">
+        <pokritost>88</pokritost>
+        <napake>4</napake>
+        <qualityGate>OK</qualityGate>
+    </porocilo>
+    <porocilo id="q5" projektId="p5">
+        <pokritost>79</pokritost>
+        <napake>9</napake>
+        <qualityGate>ERROR</qualityGate>
+    </porocilo>
+    <porocilo id="q6" projektId="p6">
+        <pokritost>95</pokritost>
+        <napake>1</napake>
+        <qualityGate>OK</qualityGate>
+    </porocilo>
+    <porocilo id="q7" projektId="p7">
+        <pokritost>61</pokritost>
+        <napake>25</napake>
+        <qualityGate>ERROR</qualityGate>
+    </porocilo>
+    <porocilo id="q8" projektId="p8">
+        <pokritost>83</pokritost>
+        <napake>6</napake>
+        <qualityGate>OK</qualityGate>
+    </porocilo>
+    <porocilo id="q9" projektId="p9">
+        <pokritost></pokritost>
+        <napake>0</napake>
+        <qualityGate>NONE</qualityGate>
+    </porocilo>
+    <porocilo id="q10" projektId="p10">
+        <pokritost>72</pokritost>
+        <napake>15</napake>
+        <qualityGate>ERROR</qualityGate>
+    </porocilo>
+</porocila>
