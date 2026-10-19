@@ -1,5 +1,133 @@
 <?xml version='1.0' encoding='utf-8'?>
 <projekti>
+    <projekt id="p1">
+        <ime>DevPulse</ime>
+        <repozitorij>bagii/devpulse</repozitorij>
+        <jezik>Go</jezik>
+        <datum>2026-10-10</datum>
+        <ci>
+            <status>success</status>
+            <trajanje>120</trajanje>
+            <datum>2026-10-10</datum>
+        </ci>
+        <kakovost>
+            <pokritost>92.0</pokritost>
+            <napake>2</napake>
+            <qualityGate>OK</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p2">
+        <ime>TaskFlow</ime>
+        <repozitorij>demo/taskflow</repozitorij>
+        <jezik>Python</jezik>
+        <datum>2026-10-08</datum>
+        <ci>
+            <status>failure</status>
+            <trajanje>240</trajanje>
+            <datum>2026-10-08</datum>
+        </ci>
+        <kakovost>
+            <pokritost>74.0</pokritost>
+            <napake>12</napake>
+            <qualityGate>ERROR</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p3">
+        <ime>ShopAPI</ime>
+        <repozitorij>demo/shopapi</repozitorij>
+        <jezik>JavaScript</jezik>
+        <datum>2026-10-07</datum>
+        <ci>
+            <status>failure</status>
+            <trajanje>180</trajanje>
+            <datum>2026-10-07</datum>
+        </ci>
+        <kakovost>
+            <pokritost>65.0</pokritost>
+            <napake>20</napake>
+            <qualityGate>ERROR</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p4">
+        <ime>CloudNotes</ime>
+        <repozitorij>demo/cloudnotes</repozitorij>
+        <jezik>TypeScript</jezik>
+        <datum>2026-10-06</datum>
+        <ci>
+            <status>success</status>
+            <trajanje>95</trajanje>
+            <datum>2026-10-06</datum>
+        </ci>
+        <kakovost>
+            <pokritost>88.0</pokritost>
+            <napake>4</napake>
+            <qualityGate>OK</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p5">
+        <ime>WeatherHub</ime>
+        <repozitorij>demo/weatherhub</repozitorij>
+        <jezik>Python</jezik>
+        <datum>2026-10-05</datum>
+        <ci>
+            <status>success</status>
+            <trajanje>130</trajanje>
+            <datum>2026-10-05</datum>
+        </ci>
+        <kakovost>
+            <pokritost>79.0</pokritost>
+            <napake>9</napake>
+            <qualityGate>ERROR</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p6">
+        <ime>AuthCore</ime>
+        <repozitorij>demo/authcore</repozitorij>
+        <jezik>Go</jezik>
+        <datum>2026-10-04</datum>
+        <ci>
+            <status>success</status>
+            <trajanje>80</trajanje>
+            <datum>2026-10-04</datum>
+        </ci>
+        <kakovost>
+            <pokritost>95.0</pokritost>
+            <napake>1</napake>
+            <qualityGate>OK</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p7">
+        <ime>DataSync</ime>
+        <repozitorij>demo/datasync</repozitorij>
+        <jezik>Java</jezik>
+        <datum>2026-10-03</datum>
+        <ci>
+            <status>failure</status>
+            <trajanje>310</trajanje>
+            <datum>2026-10-03</datum>
+        </ci>
+        <kakovost>
+            <pokritost>61.0</pokritost>
+            <napake>25</napake>
+            <qualityGate>ERROR</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p8">
+        <ime>BlogEngine</ime>
+        <repozitorij>demo/blogengine</repozitorij>
+        <jezik>PHP</jezik>
+        <datum>2026-10-02</datum>
+        <ci>
+            <status>success</status>
+            <trajanje>105</trajanje>
+            <datum>2026-10-02</datum>
+        </ci>
+        <kakovost>
+            <pokritost>83.0</pokritost>
+            <napake>6</napake>
+            <qualityGate>OK</qualityGate>
+        </kakovost>
+    </projekt>
     <projekt id="p9">
         <ime>FileManager</ime>
         <repozitorij>demo/filemanager</repozitorij>
@@ -14,6 +142,22 @@
             <pokritost />
             <napake>0</napake>
             <qualityGate>NONE</qualityGate>
+        </kakovost>
+    </projekt>
+    <projekt id="p10">
+        <ime>ChatServer</ime>
+        <repozitorij>demo/chatserver</repozitorij>
+        <jezik>Go</jezik>
+        <datum>2026-09-30</datum>
+        <ci>
+            <status>failure</status>
+            <trajanje>200</trajanje>
+            <datum>2026-09-30</datum>
+        </ci>
+        <kakovost>
+            <pokritost>72.0</pokritost>
+            <napake>15</napake>
+            <qualityGate>ERROR</qualityGate>
         </kakovost>
     </projekt>
 </projekti>

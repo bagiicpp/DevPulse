@@ -1,5 +1,141 @@
 [
     {
+        "id": "p1",
+        "ime": "DevPulse",
+        "repozitorij": "bagii/devpulse",
+        "jezik": "Go",
+        "datum": "2026-10-10",
+        "ci": {
+            "status": "success",
+            "trajanje": 120,
+            "datum": "2026-10-10"
+        },
+        "kakovost": {
+            "pokritost": 92.0,
+            "napake": 2,
+            "qualityGate": "OK"
+        }
+    },
+    {
+        "id": "p2",
+        "ime": "TaskFlow",
+        "repozitorij": "demo/taskflow",
+        "jezik": "Python",
+        "datum": "2026-10-08",
+        "ci": {
+            "status": "failure",
+            "trajanje": 240,
+            "datum": "2026-10-08"
+        },
+        "kakovost": {
+            "pokritost": 74.0,
+            "napake": 12,
+            "qualityGate": "ERROR"
+        }
+    },
+    {
+        "id": "p3",
+        "ime": "ShopAPI",
+        "repozitorij": "demo/shopapi",
+        "jezik": "JavaScript",
+        "datum": "2026-10-07",
+        "ci": {
+            "status": "failure",
+            "trajanje": 180,
+            "datum": "2026-10-07"
+        },
+        "kakovost": {
+            "pokritost": 65.0,
+            "napake": 20,
+            "qualityGate": "ERROR"
+        }
+    },
+    {
+        "id": "p4",
+        "ime": "CloudNotes",
+        "repozitorij": "demo/cloudnotes",
+        "jezik": "TypeScript",
+        "datum": "2026-10-06",
+        "ci": {
+            "status": "success",
+            "trajanje": 95,
+            "datum": "2026-10-06"
+        },
+        "kakovost": {
+            "pokritost": 88.0,
+            "napake": 4,
+            "qualityGate": "OK"
+        }
+    },
+    {
+        "id": "p5",
+        "ime": "WeatherHub",
+        "repozitorij": "demo/weatherhub",
+        "jezik": "Python",
+        "datum": "2026-10-05",
+        "ci": {
+            "status": "success",
+            "trajanje": 130,
+            "datum": "2026-10-05"
+        },
+        "kakovost": {
+            "pokritost": 79.0,
+            "napake": 9,
+            "qualityGate": "ERROR"
+        }
+    },
+    {
+        "id": "p6",
+        "ime": "AuthCore",
+        "repozitorij": "demo/authcore",
+        "jezik": "Go",
+        "datum": "2026-10-04",
+        "ci": {
+            "status": "success",
+            "trajanje": 80,
+            "datum": "2026-10-04"
+        },
+        "kakovost": {
+            "pokritost": 95.0,
+            "napake": 1,
+            "qualityGate": "OK"
+        }
+    },
+    {
+        "id": "p7",
+        "ime": "DataSync",
+        "repozitorij": "demo/datasync",
+        "jezik": "Java",
+        "datum": "2026-10-03",
+        "ci": {
+            "status": "failure",
+            "trajanje": 310,
+            "datum": "2026-10-03"
+        },
+        "kakovost": {
+            "pokritost": 61.0,
+            "napake": 25,
+            "qualityGate": "ERROR"
+        }
+    },
+    {
+        "id": "p8",
+        "ime": "BlogEngine",
+        "repozitorij": "demo/blogengine",
+        "jezik": "PHP",
+        "datum": "2026-10-02",
+        "ci": {
+            "status": "success",
+            "trajanje": 105,
+            "datum": "2026-10-02"
+        },
+        "kakovost": {
+            "pokritost": 83.0,
+            "napake": 6,
+            "qualityGate": "OK"
+        }
+    },
+    {
         "id": "p9",
         "ime": "FileManager",
         "repozitorij": "demo/filemanager",
@@ -14,6 +150,23 @@
             "pokritost": null,
             "napake": 0,
             "qualityGate": "NONE"
+        }
+    },
+    {
+        "id": "p10",
+        "ime": "ChatServer",
+        "repozitorij": "demo/chatserver",
+        "jezik": "Go",
+        "datum": "2026-09-30",
+        "ci": {
+            "status": "failure",
+            "trajanje": 200,
+            "datum": "2026-09-30"
+        },
+        "kakovost": {
+            "pokritost": 72.0,
+            "napake": 15,
+            "qualityGate": "ERROR"
         }
     }
 ]
