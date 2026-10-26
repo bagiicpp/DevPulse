@@ -54,6 +54,28 @@ python main.py
 
 The program displays an interactive menu for filtering projects. Results are printed to the console and automatically exported to `filtrirano.json` and `filtrirano.xml`.
 
+### N2 – Web Scraping
+
+A standalone Python parser that extracts repository information from a public GitHub webpage using **Requests** and **BeautifulSoup**.
+
+The parser extracts:
+
+- Repository name and URL
+- Repository description
+- Star count
+- Fork count
+
+The extracted data is saved to `repository.json` for potential use in the final DevPulse application.
+
+**Run the parser:**
+
+```bash
+cd n2
+uv venv
+uv pip install requests beautifulsoup4
+uv run python parser.py
+```
+
 ## Technologies
 
 - **Go** – planned backend microservices
