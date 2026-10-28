@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="sl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>DevPulse | IKT statistika</title>
+
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>DevPulse</h1>
+        <p>Statistika zaposlovanja in izobraževanja na področju IKT</p>
+      </header>
+
+      <section class="card">
+        <h2>Filtriranje podatkov</h2>
+
+        <div class="filters">
+          <label>
+            Kazalnik
+            <select id="indicator"></select>
+          </label>
+
+          <label>
+            Kohezijska regija
+            <select id="region"></select>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Primerjava po letih</h2>
+        <canvas id="statisticsChart"></canvas>
+      </section>
+
+      <section class="card">
+        <h2>Sprememba med letoma</h2>
+        <p id="difference">—</p>
+      </section>
+
+      <footer>
+        <p id="status">Nalaganje podatkov...</p>
+        <p>Vir: Statistični urad Republike Slovenije (SURS)</p>
+      </footer>
+    </main>
+  </body>
+</html>

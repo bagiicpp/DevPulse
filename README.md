@@ -21,6 +21,8 @@ The planned backend architecture consists of **Go microservices** communicating 
 .
 ├── n0/             # Project proposal and architecture diagram
 ├── n1/             # XML processing assignment
+├── n2/             # Web scraping assignment
+├── n3/             # PC-Axis data visualization
 └── README.md
 ```
 
@@ -31,6 +33,7 @@ The planned backend architecture consists of **Go microservices** communicating 
 Contains the initial DevPulse project description and architecture diagram.
 
 **Files:**
+
 - `Blagoja Vasilev.docx`
 - `DevPulseDiagram.png`
 
@@ -76,6 +79,34 @@ uv pip install requests beautifulsoup4
 uv run python parser.py
 ```
 
+### N3 – Open Data Visualization (PC-Axis)
+
+A standalone web application that visualizes official Slovenian ICT employment and training statistics using **PC-Axis data from the Statistical Office of Slovenia (SURS)**.
+
+The application demonstrates:
+
+- Dynamically loading and parsing PC-Axis (`.px`) data
+- Decoding Windows-1250 encoded statistical files
+- Filtering statistics by ICT indicator and cohesion region
+- Visualizing data from 2022 and 2024 using **Chart.js**
+- Calculating absolute and percentage changes between years
+- Updating charts and calculations dynamically when filters change
+
+The dataset is obtained from the [Slovenian Open Data Portal (OPSI)](https://podatki.gov.si/dataset/surs2971015s).
+
+**Technologies:** HTML, CSS, JavaScript, Chart.js
+
+**Run the application:**
+
+```bash
+cd n3
+python -m http.server 8000
+```
+
+Open `http://localhost:8000` in your browser.
+
+The application loads the local `data/ict.px` file on startup and displays interactive ICT statistics.
+
 ## Technologies
 
 - **Go** – planned backend microservices
@@ -83,6 +114,9 @@ uv run python parser.py
 - **GitHub REST API** – development activity and CI/CD data
 - **SonarQube Cloud API** – code-quality metrics
 - **XML / JSON** – structured data formats
+- **HTML / CSS / JavaScript** – interactive data visualization
+- **Chart.js** – statistical charts
+- **PC-Axis** – official statistical data format
 
 ## Status
 
