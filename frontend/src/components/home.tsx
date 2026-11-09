@@ -111,8 +111,8 @@ export function Home({ auth }: { auth: AuthState }) {
             help you think through what comes next.
           </p>
           <p className="text-sm leading-6 text-muted-foreground">
-            Guidance starts with what you share. DevPulse does not inspect your
-            repository or retrieve live GitHub data.
+            DevPulse retrieves file names and README content from GitHub to
+            inform its guidance. Source code and live CI metrics are not analyzed.
           </p>
           <Link
             to="/chat"

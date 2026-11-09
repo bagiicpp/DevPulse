@@ -2,25 +2,22 @@ import { useState } from "react";
 import { toast } from "sonner";
 import axios from "axios";
 import { useSearchParams } from "react-router";
-import { readDefaultRepository } from "@/lib/preferences";
+import { isRepositoryName, readDefaultRepository } from "@/lib/preferences";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import type { AuthState } from "@/hooks/use-session";
+import { RepositoryPicker } from "@/components/repository-picker";
+import { AnalysisResult } from "@/components/analysis-result";
+import { requestError, type AIResponse } from "@/lib/analysis";
 import { Textarea } from "@/components/ui/textarea";
-
-type AIResponse = {
-  summary: string;
-  findings: string[];
-  recommendations: string[];
-};
 
 type Message = {
   role: "user" | "assistant";
   content: string | AIResponse;
 };
 
-export function AIChat() {
+export function AIChat({ auth }: { auth: AuthState }) {
   const [params] = useSearchParams();
   const [repository, setRepository] = useState(() => params.get("repository") ?? readDefaultRepository());
   const [question, setQuestion] = useState(() => params.get("question") ?? "");
@@ -30,6 +27,10 @@ export function AIChat() {
   async function sendMessage() {
     if (!repository.trim() || !question.trim() || loading) return;
 
+    if (!isRepositoryName(repository.trim())) {
+      toast.error("Use the format owner/repository.");
+      return;
+    }
     const currentQuestion = question.trim();
 
     setLoading(true);
@@ -38,7 +39,7 @@ export function AIChat() {
       const { data } = await axios.post<AIResponse>(
         "/api/chat",
         { repository: repository.trim(), question: currentQuestion },
-        { timeout: 40_000 },
+        { timeout: 75_000 },
       );
 
       setMessages((prev) => [
@@ -48,23 +49,7 @@ export function AIChat() {
       ]);
       setQuestion("");
     } catch (error) {
-      let message = "Could not reach the AI service. Check your connection and try again.";
-      if (axios.isAxiosError(error) && error.response) {
-        switch (error.response.status) {
-          case 400:
-            message = "Enter a repository name and a question, then try again.";
-            break;
-          case 413:
-            message = "Your request is too long. Shorten the repository name or question and try again.";
-            break;
-          case 502:
-            message = "The AI service could not generate a response. Please try again.";
-            break;
-          default:
-            message = "The server could not complete your request. Please try again.";
-        }
-      }
-      toast.error(message);
+      toast.error(requestError(error));
     } finally {
       setLoading(false);
     }
@@ -77,23 +62,11 @@ export function AIChat() {
           Chat with AI
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Get software-project guidance using a repository name and your question.
-          DevPulse does not retrieve or inspect GitHub data.
+          Ask about your project using its GitHub file names and README as context.
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="repository" className="text-sm font-medium">
-          GitHub Repository
-        </label>
-        <Input
-          id="repository"
-          placeholder="owner/repository"
-          value={repository}
-          onChange={(e) => setRepository(e.target.value)}
-          disabled={loading}
-        />
-      </div>
+      <RepositoryPicker user={auth.user} value={repository} onChange={(value) => { setRepository(value); setMessages([]); }} disabled={loading} />
 
       <div
         role="log"
@@ -120,31 +93,7 @@ export function AIChat() {
               {typeof message.content === "string" ? (
                 <p>{message.content}</p>
               ) : (
-                <>
-                  <p>{message.content.summary}</p>
-
-                  {message.content.findings.length > 0 && (
-                    <div>
-                      <h3 className="mb-2 font-semibold">Findings</h3>
-                      <ul className="list-disc space-y-1 pl-5">
-                        {message.content.findings.map((finding, i) => (
-                          <li key={i}>{finding}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {message.content.recommendations.length > 0 && (
-                    <div>
-                      <h3 className="mb-2 font-semibold">Recommendations</h3>
-                      <ul className="list-disc space-y-1 pl-5">
-                        {message.content.recommendations.map((item, i) => (
-                          <li key={i}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
+                <AnalysisResult response={message.content} />
               )}
             </CardContent>
           </Card>
@@ -152,7 +101,7 @@ export function AIChat() {
 
         {loading && (
           <p role="status" className="text-sm text-muted-foreground">
-            Generating a response...
+            Reading repository context and generating a response...
           </p>
         )}
       </div>

@@ -41,7 +41,7 @@ func TestGitHubOAuthSessionLifecycle(t *testing.T) {
 	if !cookie.HttpOnly || cookie.SameSite != http.SameSiteLaxMode || cookie.Secure || cookie.MaxAge != 600 {
 		t.Fatalf("unexpected local state cookie: %#v", cookie)
 	}
-	if query.Get("client_id") != "client-id" || query.Get("redirect_uri") != "http://localhost:5173/api/auth/github/callback" || query.Get("scope") != "" || query.Get("code_challenge_method") != "S256" {
+	if query.Get("client_id") != "client-id" || query.Get("redirect_uri") != "http://localhost:5173/api/auth/github/callback" || query.Get("scope") != "repo" || query.Get("code_challenge_method") != "S256" {
 		t.Fatalf("unexpected authorization parameters: %v", query)
 	}
 	var verifier string
@@ -89,6 +89,9 @@ func TestGitHubOAuthSessionLifecycle(t *testing.T) {
 	}
 	if session == nil || !session.HttpOnly || session.MaxAge != 28800 || session.SameSite != http.SameSiteLaxMode {
 		t.Fatalf("unexpected session cookie: %#v", session)
+	}
+	if a.sessions[session.Value].token != "private-token" {
+		t.Fatal("the GitHub token must remain in the server session for repository reads")
 	}
 	check := func(wantUser bool) {
 		t.Helper()

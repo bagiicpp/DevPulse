@@ -23,7 +23,8 @@ type ChatResponse struct {
 	Recommendations []string `json:"recommendations"`
 }
 
-func chatHandler(w http.ResponseWriter, r *http.Request) {
+func (a *authServer) chatHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -49,14 +50,24 @@ func chatHandler(w http.ResponseWriter, r *http.Request) {
 
 	request.Repository = strings.TrimSpace(request.Repository)
 	request.Question = strings.TrimSpace(request.Question)
-	if request.Repository == "" || request.Question == "" {
-		http.Error(w, "Repository and question are required", http.StatusBadRequest)
+	if !repositoryName.MatchString(request.Repository) || request.Question == "" {
+		http.Error(w, "Use owner/repository and provide a question", http.StatusBadRequest)
 		return
 	}
 
+	session, _ := a.currentSession(r)
+	if session.token != "" && r.Header.Get("Origin") != "" && r.Header.Get("Origin") != a.origin {
+		http.Error(w, "Invalid request origin", http.StatusForbidden)
+		return
+	}
+	repository, err := fetchRepository(r.Context(), request.Repository, session.token)
+	if err != nil {
+		writeGitHubError(w, err)
+		return
+	}
 	response, err := askAI(
 		r.Context(),
-		request.Repository,
+		repository,
 		request.Question,
 	)
 
@@ -64,7 +75,7 @@ func chatHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("LLM error: %v", err)
 		http.Error(
 			w,
-			"Failed to generate AI response",
+			"AI service could not generate a response. Please try again.",
 			http.StatusBadGateway,
 		)
 		return
@@ -88,7 +99,6 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/chat", chatHandler)
 	auth, err := newAuthServer(os.Getenv("APP_URL"), os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRET"))
 	if err != nil {
 		log.Fatal(err)

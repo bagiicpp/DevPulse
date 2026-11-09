@@ -43,20 +43,19 @@ export function Dashboard({ auth }: { auth: AuthState }) {
             />
             <div>
               <h3 className="text-base font-medium">
-                No repository data connected
+                Analyze a repository
               </h3>
               <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                Project health metrics will appear when repository integrations
-                are available. For now, bring your own context to AI chat or
-                choose a question in Project Analysis.
+                Select a GitHub repository to analyze its file structure and
+                README, then ask questions about the findings in AI chat.
               </p>
             </div>
             <Button
               variant="outline"
-              render={<Link to="/analysis" />}
+              render={<Link to="/repositories" />}
               nativeButton={false}
             >
-              Explore project questions <ArrowRight aria-hidden="true" />
+              Select a repository <ArrowRight aria-hidden="true" />
             </Button>
           </CardContent>
         </Card>
@@ -81,11 +80,11 @@ export function Dashboard({ auth }: { auth: AuthState }) {
           </div>
           <div className="flex flex-wrap justify-between gap-2 py-4">
             <dt className="text-muted-foreground">AI responses</dt>
-            <dd>Generated from your supplied context</dd>
+            <dd>Based on repository file names and README</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-2 py-4">
-            <dt className="text-muted-foreground">Live repository metrics</dt>
-            <dd>Not connected</dd>
+            <dt className="text-muted-foreground">Repository context</dt>
+            <dd>Retrieved from GitHub for each analysis</dd>
           </div>
         </dl>
         {!auth.user && !auth.loading && !auth.error && (

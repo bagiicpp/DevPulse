@@ -1,7 +1,6 @@
 import {
   ChartNoAxesCombined,
   FolderGit2,
-  House,
   LayoutDashboard,
   LogIn,
   MessageSquare,
@@ -29,7 +28,6 @@ import {
 } from "@/components/ui/sidebar"
 
 const navigation = [
-  { title: "Home", href: "/", icon: House },
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Repositories", href: "/repositories", icon: FolderGit2 },
   { title: "Project Analysis", href: "/analysis", icon: ChartNoAxesCombined },

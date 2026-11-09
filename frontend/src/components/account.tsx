@@ -55,7 +55,7 @@ export function Account({ auth }: { auth: AuthState }) {
                 </div>
                 <div className="flex justify-between gap-4 py-4">
                   <dt className="text-muted-foreground">Repository access</dt>
-                  <dd>Not used</dd>
+                  <dd>Public and private repositories</dd>
                 </div>
               </dl>
               <div className="flex flex-wrap gap-3">

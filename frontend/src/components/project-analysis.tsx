@@ -1,105 +1,72 @@
 import { useState } from "react"
-import { useNavigate } from "react-router"
+import axios from "axios"
+import { useSearchParams, Link } from "react-router"
 import { toast } from "sonner"
+import type { AuthState } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { RepositoryPicker } from "@/components/repository-picker"
+import { AnalysisResult } from "@/components/analysis-result"
 import { isRepositoryName, readDefaultRepository } from "@/lib/preferences"
+import { requestError, type AIResponse } from "@/lib/analysis"
 
 const topics = [
-  {
-    label: "Overall project health",
-    question:
-      "What evidence should I collect to assess this project's overall health?",
-  },
-  {
-    label: "CI reliability",
-    question:
-      "What should I measure and investigate to improve this project's CI reliability?",
-  },
-  {
-    label: "Code quality",
-    question:
-      "What should I review to understand this project's code quality and test coverage?",
-  },
-  {
-    label: "Pull request workflow",
-    question:
-      "What project-level signals help identify bottlenecks in the pull request workflow?",
-  },
+  { label: "Overall project health", question: "Assess this project's health based on its file structure and README. Identify strengths, gaps, and practical next steps, stating what evidence is missing." },
+  { label: "CI reliability", question: "Identify CI configuration from the file names and README. Explain what is documented and what CI evidence is needed to assess reliability." },
+  { label: "Code quality", question: "Review this project's structure and documented testing practices. Identify possible gaps without assuming source-code quality or test coverage." },
+  { label: "Pull request workflow", question: "Review this project's documented contribution and pull request workflow. Suggest improvements and identify missing evidence." },
 ]
 
-export function ProjectAnalysis() {
-  const [repository, setRepository] = useState(readDefaultRepository)
+export function ProjectAnalysis({ auth }: { auth: AuthState }) {
+  const [params] = useSearchParams()
+  const [repository, setRepository] = useState(() => params.get("repository") ?? readDefaultRepository())
   const [question, setQuestion] = useState(topics[0].question)
-  const navigate = useNavigate()
+  const [result, setResult] = useState<AIResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function analyze() {
+    if (loading) return
+    if (!isRepositoryName(repository.trim())) {
+      toast.error("Use the format owner/repository.")
+      return
+    }
+    setResult(null)
+    setLoading(true)
+    try {
+      const { data } = await axios.post<AIResponse>("/api/chat", { repository: repository.trim(), question }, { timeout: 75_000 })
+      setResult(data)
+    } catch (error) {
+      toast.error(requestError(error))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 py-2 md:py-6">
       <header>
-        <h1 className="text-4xl leading-none font-normal tracking-[-0.04em] md:text-5xl">
-          Project Analysis
-        </h1>
+        <h1 className="text-4xl leading-none font-normal tracking-[-0.04em] md:text-5xl">Project Analysis</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Start with a useful question, then add what you know about your
-          project.
+          Analyze your repository's structure and documentation with AI.
         </p>
       </header>
-      <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
-        Live analysis is not available yet. This form prepares a question for AI
-        chat; it does not scan your repository or calculate a health score.
-      </p>
-      <form
-        noValidate
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const value = repository.trim()
-          if (!isRepositoryName(value)) {
-            toast.error("Use the format owner/repository.")
-            return
-          }
-          navigate(
-            `/chat?${new URLSearchParams({ repository: value, question })}`,
-          )
-        }}
-      >
+      <form noValidate className="space-y-6" onSubmit={(event) => { event.preventDefault(); void analyze() }}>
+        <RepositoryPicker user={auth.user} value={repository} onChange={(value) => { setRepository(value); setResult(null) }} disabled={loading} />
         <div className="space-y-2">
-          <label htmlFor="analysis-repository" className="text-sm font-medium">
-            Repository name
-          </label>
-          <Input
-            id="analysis-repository"
-            value={repository}
-            onChange={(event) => setRepository(event.target.value)}
-            placeholder="owner/repository"
-            required
-            maxLength={140}
-          />
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="analysis-topic" className="text-sm font-medium">
-            What would you like to understand?
-          </label>
-          <select
-            id="analysis-topic"
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            className="h-11 w-full rounded-full border border-input bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
-          >
-            {topics.map((topic) => (
-              <option key={topic.label} value={topic.question}>
-                {topic.label}
-              </option>
-            ))}
+          <label htmlFor="analysis-topic" className="text-sm font-medium">What would you like to understand?</label>
+          <select id="analysis-topic" value={question} disabled={loading} onChange={(event) => { setQuestion(event.target.value); setResult(null) }} className="h-11 w-full rounded-full border border-input bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 md:text-sm">
+            {topics.map((topic) => <option key={topic.label} value={topic.question}>{topic.label}</option>)}
           </select>
         </div>
-        <div className="border-t pt-5">
-          <h2 className="text-sm font-medium">Your starting question</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {question}
-          </p>
-        </div>
-        <Button type="submit">Continue to AI chat</Button>
+        <Button type="submit" disabled={loading || !repository.trim()}>{loading ? "Analyzing…" : "Analyze repository"}</Button>
       </form>
+      {loading && <p role="status" className="text-sm text-muted-foreground">Reading repository context and generating analysis…</p>}
+      {result && (
+        <section aria-label="Analysis results" aria-live="polite" className="space-y-5 border-t pt-6">
+          <h2 className="text-2xl font-normal tracking-tight wrap-anywhere">Analysis for {repository.trim()}</h2>
+          <AnalysisResult response={result} />
+          <Button variant="outline" render={<Link to={`/chat?repository=${encodeURIComponent(repository.trim())}`} />} nativeButton={false}>Ask a follow-up in chat</Button>
+        </section>
+      )}
     </div>
   )
 }

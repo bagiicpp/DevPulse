@@ -39,8 +39,8 @@ export function Login({ auth }: { auth: AuthState }) {
                 Welcome to DevPulse
               </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Sign in with GitHub to view your profile and manage your
-                session.
+                Sign in with GitHub to select and analyze your public and private
+                repositories.
               </p>
             </div>
             {error && (
@@ -80,8 +80,9 @@ export function Login({ auth }: { auth: AuthState }) {
               </p>
             )}
             <p className="border-t pt-4 text-sm leading-6 text-muted-foreground">
-              DevPulse uses your GitHub identity for sign-in. Your repositories
-              are not accessed, and no GitHub password is entered here.
+              GitHub will ask for repository access. DevPulse reads file names
+              and README content and sends them to the AI provider when you
+              request analysis. Your GitHub token stays on the server.
             </p>
           </CardContent>
         </Card>

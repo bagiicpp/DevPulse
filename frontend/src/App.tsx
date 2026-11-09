@@ -47,9 +47,9 @@ function App() {
         <Route path="/login" element={<Login auth={auth} />} />
         <Route element={<AppLayout auth={auth} />}>
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
-          <Route path="/repositories" element={<Repositories />} />
-          <Route path="/analysis" element={<ProjectAnalysis />} />
-          <Route path="/chat" element={<AIChat />} />
+          <Route path="/repositories" element={<Repositories auth={auth} />} />
+          <Route path="/analysis" element={<ProjectAnalysis auth={auth} />} />
+          <Route path="/chat" element={<AIChat auth={auth} />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/account" element={<Account auth={auth} />} />
           <Route

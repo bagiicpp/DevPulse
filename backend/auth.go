@@ -35,6 +35,7 @@ type loginAttempt struct {
 
 type userSession struct {
 	user    GitHubUser
+	token   string
 	expires time.Time
 }
 
@@ -69,6 +70,23 @@ func (a *authServer) register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/auth/github", a.start)
 	mux.HandleFunc("GET /api/auth/github/callback", a.callback)
 	mux.HandleFunc("POST /api/auth/logout", a.logout)
+	mux.HandleFunc("GET /api/repositories", a.repositories)
+	mux.HandleFunc("/api/chat", a.chatHandler)
+}
+
+func (a *authServer) currentSession(r *http.Request) (userSession, bool) {
+	cookie, err := r.Cookie(sessionCookie)
+	if err != nil {
+		return userSession{}, false
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	session, found := a.sessions[cookie.Value]
+	if !found || !time.Now().Before(session.expires) {
+		delete(a.sessions, cookie.Value)
+		return userSession{}, false
+	}
+	return session, true
 }
 
 func (a *authServer) configured() bool {
@@ -134,7 +152,7 @@ func (a *authServer) start(w http.ResponseWriter, r *http.Request) {
 	hash := sha256.Sum256([]byte(verifier))
 	query := url.Values{
 		"client_id": {a.clientID}, "redirect_uri": {a.origin + "/api/auth/github/callback"},
-		"state": {state}, "scope": {""}, "code_challenge_method": {"S256"},
+		"state": {state}, "scope": {"repo"}, "code_challenge_method": {"S256"},
 		"code_challenge": {base64.RawURLEncoding.EncodeToString(hash[:])},
 	}
 	http.Redirect(w, r, "https://github.com/login/oauth/authorize?"+query.Encode(), http.StatusFound)
@@ -206,6 +224,7 @@ func (a *authServer) callback(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("Accept", "application/json")
 	var token struct {
 		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
 	}
 	if err := githubJSON(req, &token); err != nil || token.AccessToken == "" {
 		log.Print("GitHub token exchange failed")
@@ -226,15 +245,18 @@ func (a *authServer) callback(w http.ResponseWriter, r *http.Request) {
 		fail("failed")
 		return
 	}
-	// Only the verified identity is kept; the GitHub access token is not stored.
 	id := rand.Text() + rand.Text()
+	lifetime := 8 * time.Hour
+	if token.ExpiresIn > 0 && token.ExpiresIn < int64(lifetime/time.Second) {
+		lifetime = time.Duration(token.ExpiresIn) * time.Second
+	}
 	a.mu.Lock()
 	if old, err := r.Cookie(sessionCookie); err == nil {
 		delete(a.sessions, old.Value)
 	}
-	a.sessions[id] = userSession{user: user, expires: time.Now().Add(8 * time.Hour)}
+	a.sessions[id] = userSession{user: user, token: token.AccessToken, expires: time.Now().Add(lifetime)}
 	a.mu.Unlock()
-	a.cookie(w, sessionCookie, id, 8*60*60)
+	a.cookie(w, sessionCookie, id, int(lifetime/time.Second))
 	http.Redirect(w, r, a.origin+"/dashboard", http.StatusFound)
 }
 

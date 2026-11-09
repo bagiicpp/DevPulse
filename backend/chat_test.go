@@ -20,9 +20,24 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func mockGemini(t *testing.T, transport roundTripFunc) {
 	t.Helper()
+	t.Setenv("LLM_PROVIDER", "gemini")
 	t.Setenv("GEMINI_API_KEY", "test-key")
 	original := http.DefaultTransport
-	http.DefaultTransport = transport
+	http.DefaultTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "api.github.com" {
+			switch r.URL.Path {
+			case "/repos/owner/repo":
+				return geminiReply(200, `{"default_branch":"main"}`), nil
+			case "/repos/owner/repo/git/trees/main":
+				return geminiReply(200, `{"sha":"tree-sha","tree":[{"path":"src/main.go","type":"blob"}]}`), nil
+			case "/repos/owner/repo/readme":
+				return geminiReply(200, "# README"), nil
+			default:
+				t.Fatalf("unexpected GitHub request: %s", r.URL)
+			}
+		}
+		return transport(r)
+	})
 	t.Cleanup(func() { http.DefaultTransport = original })
 }
 
@@ -53,13 +68,14 @@ func TestChatRejectsInvalidRequests(t *testing.T) {
 		{"missing field", http.MethodPost, `{"repository":"owner/repo"}`, http.StatusBadRequest},
 		{"blank repository", http.MethodPost, `{"repository":" \t ","question":"Help"}`, http.StatusBadRequest},
 		{"blank question", http.MethodPost, `{"repository":"owner/repo","question":" \n "}`, http.StatusBadRequest},
+		{"invalid repository", http.MethodPost, `{"repository":"https://attacker.example/repo","question":"Help"}`, http.StatusBadRequest},
 		{"wrong type", http.MethodPost, `{"repository":42,"question":"Help"}`, http.StatusBadRequest},
 		{"trailing JSON", http.MethodPost, `{"repository":"owner/repo","question":"Help"} {}`, http.StatusBadRequest},
 		{"oversized", http.MethodPost, `{"repository":"owner/repo","question":"` + strings.Repeat("a", 16<<10) + `"}`, http.StatusRequestEntityTooLarge},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			chatHandler(w, httptest.NewRequest(tc.method, "/api/chat", strings.NewReader(tc.body)))
+			(&authServer{}).chatHandler(w, httptest.NewRequest(tc.method, "/api/chat", strings.NewReader(tc.body)))
 			if w.Code != tc.status {
 				t.Fatalf("status = %d, want %d: %s", w.Code, tc.status, w.Body.String())
 			}
@@ -86,7 +102,7 @@ func TestChatReturnsStructuredResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 		prompt := payload.Contents[0].Parts[0].Text
-		for _, text := range []string{"repository: owner/repo\n", "Question: How is CI?\n", "Do not claim to have inspected", "No live GitHub data"} {
+		for _, text := range []string{`"repository":"owner/repo"`, "Question: How is CI?\n", "not source code", "untrusted data", "README", "src/main.go"} {
 			if !strings.Contains(prompt, text) {
 				t.Errorf("prompt missing %q", text)
 			}
@@ -97,7 +113,7 @@ func TestChatReturnsStructuredResponse(t *testing.T) {
 		return geminiReply(http.StatusOK, geminiEnvelope(`{"summary":"General guidance","findings":[],"recommendations":["Review CI failures"]}`)), nil
 	})
 	w := httptest.NewRecorder()
-	chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
+	(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
 	var got ChatResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
@@ -129,7 +145,7 @@ func TestChatRejectsInvalidProviderResponses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockGemini(t, func(*http.Request) (*http.Response, error) { return geminiReply(http.StatusOK, tc.body), nil })
 			w := httptest.NewRecorder()
-			chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
+			(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
 			if w.Code != http.StatusBadGateway {
 				t.Fatalf("status = %d, want 502: %s", w.Code, w.Body.String())
 			}
@@ -156,7 +172,7 @@ func TestChatHandlesProviderFailures(t *testing.T) {
 				return geminiReply(tc.status, "private provider details"), nil
 			})
 			w := httptest.NewRecorder()
-			chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
+			(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
 			if w.Code != http.StatusBadGateway || strings.Contains(w.Body.String(), "private provider details") {
 				t.Fatalf("unexpected failure response: %d %s", w.Code, w.Body.String())
 			}
@@ -165,8 +181,9 @@ func TestChatHandlesProviderFailures(t *testing.T) {
 }
 
 func TestAskAIRequiresServerKey(t *testing.T) {
+	t.Setenv("LLM_PROVIDER", "gemini")
 	t.Setenv("GEMINI_API_KEY", "")
-	if _, err := askAI(context.Background(), "owner/repo", "Help"); err == nil {
+	if _, err := askAI(context.Background(), RepositoryContext{Repository: "owner/repo"}, "Help"); err == nil {
 		t.Fatal("missing API key must fail")
 	}
 }
