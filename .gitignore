@@ -1,4 +1,49 @@
-# Environment variables
+# Local agent tools and settings
+.agents/
+.claude/
+.codex/
+.pi/
+.cursor/
+.gemini/
+
+# Environment variables and private keys
 .env
 .env.*
 !.env.example
+.envrc
+.direnv/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies and generated output
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+*.tsbuildinfo
+/backend/backend
+/backend/devpulse
+*.test
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+
+# Local editor and operating-system files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.sw?
+*~
