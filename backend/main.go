@@ -2,10 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/joho/godotenv"
+	"errors"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type ChatRequest struct {
@@ -21,24 +25,34 @@ type ChatResponse struct {
 
 func chatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var request ChatRequest
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 16<<10))
+	if err != nil {
+		var sizeError *http.MaxBytesError
+		if errors.As(err, &sizeError) {
+			http.Error(w, "Request must be at most 16 KiB", http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "Could not read request", http.StatusBadRequest)
+		}
+		return
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	var request ChatRequest
+	if err := json.Unmarshal(body, &request); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
+	request.Repository = strings.TrimSpace(request.Repository)
+	request.Question = strings.TrimSpace(request.Question)
 	if request.Repository == "" || request.Question == "" {
 		http.Error(w, "Repository and question are required", http.StatusBadRequest)
 		return
 	}
-
-	log.Printf("Repository: %s | Question: %s",
-		request.Repository, request.Question)
 
 	response, err := askAI(
 		r.Context(),
@@ -75,6 +89,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/chat", chatHandler)
+	auth, err := newAuthServer(os.Getenv("APP_URL"), os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRET"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.register(mux)
 
 	log.Printf("DevPulse backend running on http://localhost:%s", port)
 

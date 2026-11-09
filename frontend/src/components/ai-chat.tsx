@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import axios from "axios";
+import { useSearchParams } from "react-router";
+import { readDefaultRepository } from "@/lib/preferences";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,8 +21,9 @@ type Message = {
 };
 
 export function AIChat() {
-  const [repository, setRepository] = useState("");
-  const [question, setQuestion] = useState("");
+  const [params] = useSearchParams();
+  const [repository, setRepository] = useState(() => params.get("repository") ?? readDefaultRepository());
+  const [question, setQuestion] = useState(() => params.get("question") ?? "");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -29,23 +32,39 @@ export function AIChat() {
 
     const currentQuestion = question.trim();
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: currentQuestion },
-    ]);
-    setQuestion("");
     setLoading(true);
 
     try {
-      const { data } = await axios.post<AIResponse>("/api/chat", {
-        repository: repository.trim(),
-        question: currentQuestion,
-      });
+      const { data } = await axios.post<AIResponse>(
+        "/api/chat",
+        { repository: repository.trim(), question: currentQuestion },
+        { timeout: 40_000 },
+      );
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: currentQuestion },
+        { role: "assistant", content: data },
+      ]);
+      setQuestion("");
     } catch (error) {
-      console.error("AI chat error:", error);
-      toast.error("Could not connect to the AI service.");
+      let message = "Could not reach the AI service. Check your connection and try again.";
+      if (axios.isAxiosError(error) && error.response) {
+        switch (error.response.status) {
+          case 400:
+            message = "Enter a repository name and a question, then try again.";
+            break;
+          case 413:
+            message = "Your request is too long. Shorten the repository name or question and try again.";
+            break;
+          case 502:
+            message = "The AI service could not generate a response. Please try again.";
+            break;
+          default:
+            message = "The server could not complete your request. Please try again.";
+        }
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -54,11 +73,12 @@ export function AIChat() {
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-6">
       <div>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight">
+        <h1 className="text-4xl leading-none font-normal tracking-[-0.04em] md:text-5xl">
           Chat with AI
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Ask questions about your GitHub repository.
+          Get software-project guidance using a repository name and your question.
+          DevPulse does not retrieve or inspect GitHub data.
         </p>
       </div>
 
@@ -75,8 +95,13 @@ export function AIChat() {
         />
       </div>
 
-      <div className="flex min-h-48 flex-1 flex-col gap-4 overflow-y-auto">
-        {messages.length === 0 && (
+      <div
+        role="log"
+        aria-label="Chat messages"
+        aria-busy={loading}
+        className="flex min-h-48 flex-1 flex-col gap-4 overflow-y-auto"
+      >
+        {messages.length === 0 && !loading && (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
             Ask your first question to get started.
           </div>
@@ -91,7 +116,7 @@ export function AIChat() {
                 : "mr-auto w-full"
             }
           >
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-3 text-sm wrap-anywhere">
               {typeof message.content === "string" ? (
                 <p>{message.content}</p>
               ) : (
@@ -126,14 +151,18 @@ export function AIChat() {
         ))}
 
         {loading && (
-          <p className="text-sm text-muted-foreground">
-            Analyzing repository...
+          <p role="status" className="text-sm text-muted-foreground">
+            Generating a response...
           </p>
         )}
       </div>
 
       <div className="space-y-3 border-t pt-4">
+        <label htmlFor="question" className="text-sm font-medium">
+          Your question
+        </label>
         <Textarea
+          id="question"
           placeholder="What would you like to know about this project?"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -146,7 +175,7 @@ export function AIChat() {
             onClick={sendMessage}
             disabled={!repository.trim() || !question.trim() || loading}
           >
-            {loading ? "Analyzing..." : "Send message"}
+            {loading ? "Generating..." : "Send message"}
           </Button>
         </div>
       </div>

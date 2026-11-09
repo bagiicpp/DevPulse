@@ -107,16 +107,18 @@ No live GitHub data has been provided.`,
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
 	if err != nil {
 		return ChatResponse{}, err
+	}
+	if len(responseBody) > 1<<20 {
+		return ChatResponse{}, fmt.Errorf("Gemini response exceeds 1 MiB")
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		return ChatResponse{}, fmt.Errorf(
-			"Gemini API returned status %d: %s",
+			"Gemini API returned status %d",
 			resp.StatusCode,
-			string(responseBody),
 		)
 	}
 
@@ -139,6 +141,16 @@ No live GitHub data has been provided.`,
 
 	if strings.TrimSpace(result.Summary) == "" {
 		return ChatResponse{}, fmt.Errorf("Gemini returned an empty summary")
+	}
+	if result.Findings == nil || result.Recommendations == nil {
+		return ChatResponse{}, fmt.Errorf("Gemini must return findings and recommendations arrays")
+	}
+	for _, items := range [][]string{result.Findings, result.Recommendations} {
+		for _, item := range items {
+			if strings.TrimSpace(item) == "" {
+				return ChatResponse{}, fmt.Errorf("Gemini returned an empty list item")
+			}
+		}
 	}
 
 	return result, nil
