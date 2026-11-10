@@ -8,11 +8,12 @@ import { requestError } from "@/lib/analysis"
 
 type Repository = { full_name: string; private: boolean }
 
-export function RepositoryPicker({ user, value, onChange, disabled = false }: {
+export function RepositoryPicker({ user, value, onChange, disabled = false, qualityScan = false }: {
   user: GitHubUser | null
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  qualityScan?: boolean
 }) {
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [page, setPage] = useState(0)
@@ -85,7 +86,7 @@ export function RepositoryPicker({ user, value, onChange, disabled = false }: {
         <Input id="repository" placeholder="owner/repository" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} maxLength={140} required />
       </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        File names and README content from this repository will be sent to the AI provider for analysis. Source file contents and live CI metrics are not included.
+        {qualityScan ? "Qlty scans supported source files from the default branch. No SonarQube setup or AI provider is required." : "File names and README content from this repository will be sent to the AI provider for analysis. Source file contents and live CI metrics are not included."}
       </p>
     </div>
   )

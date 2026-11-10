@@ -46,8 +46,8 @@ export function Dashboard({ auth }: { auth: AuthState }) {
                 Analyze a repository
               </h3>
               <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                Select a GitHub repository to analyze its file structure and
-                README, then ask questions about the findings in AI chat.
+                Select a GitHub repository to try Qlty’s code-complexity,
+                duplication, and structural code-smell analysis.
               </p>
             </div>
             <Button
@@ -79,8 +79,8 @@ export function Dashboard({ auth }: { auth: AuthState }) {
             </dd>
           </div>
           <div className="flex flex-wrap justify-between gap-2 py-4">
-            <dt className="text-muted-foreground">AI responses</dt>
-            <dd>Based on repository file names and README</dd>
+            <dt className="text-muted-foreground">Code quality trial</dt>
+            <dd>Qlty CLI · no project import required</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-2 py-4">
             <dt className="text-muted-foreground">Repository context</dt>

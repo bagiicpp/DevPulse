@@ -72,6 +72,7 @@ func (a *authServer) register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/logout", a.logout)
 	mux.HandleFunc("GET /api/repositories", a.repositories)
 	mux.HandleFunc("/api/chat", a.chatHandler)
+	mux.HandleFunc("/api/analysis", a.qualityHandler)
 }
 
 func (a *authServer) currentSession(r *http.Request) (userSession, bool) {

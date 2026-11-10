@@ -2,21 +2,24 @@
 
 DevPulse is a university project assessing **software-project health**. Its long-term goal is to combine development activity from GitHub with code-quality metrics from SonarQube Cloud into an explainable assessment.
 
-The current application demonstrates a dynamic LLM integration: enter a repository name and a question, send them to the Go server, and display a structured response containing a summary, findings, and recommendations.
+This branch evaluates **Qlty CLI for on-demand code quality**: select a GitHub repository, capture its default-branch commit, scan supported source files on the backend, and inspect measured complexity and structural/duplication findings. No Qlty Cloud account, SonarQube project import, or AI key is needed for this scan. The separate chat retains the dynamic LLM assignment flow.
 
 ## Current Application
 
 - React, TypeScript, and Vite frontend with Tailwind v4 and Neutral shadcn components.
-- A Go HTTP server exposing `POST /api/chat`.
+- A Go HTTP server exposing `POST /api/chat` and the Qlty trial endpoint `POST /api/analysis`.
 - A dynamic prompt and JSON response schema sent to the configured AI provider. The server deserializes and validates the response before returning it to React.
 - Loading feedback, Sonner notifications for errors and confirmations, and preserved input for retry after failure.
 - Lucide sidebar icons, accessible labels, and a header toggle on desktop and mobile.
 - A standalone public homepage at `/`, with GitHub sign-up leading into the app at `/dashboard`.
 - Warm paper colors, black pill controls, and spacious layouts following `DESIGN.md`, inspired by [Cosmos](https://www.cosmos.so/). The existing Geist font carries interface text; Noto Serif is reserved for DevPulse branding.
 - Real GitHub OAuth sign-in, an Account page showing the verified profile, and sign-out.
-- Settings with a browser-local default repository. Repository selection includes public and private repositories accessible through GitHub sign-in; Project Analysis displays a real structured AI assessment.
+- Settings with a browser-local default repository. Repository selection includes public and private repositories accessible through GitHub sign-in.
+- Project Analysis runs pinned Qlty CLI 0.668.0, shows file metrics and source-linked code smells, supports filtering, cancellation/retry, and discloses scan exclusions and limits.
 
-**DevPulse retrieves file paths and README text from the repository’s default branch and injects them into each AI prompt.** Analysis covers structure and documentation; source-file contents, CI results, and quality metrics are not retrieved. Repository content is treated as untrusted data in the prompt. Missing READMEs, empty repositories, and truncated context are identified for the model. Each request is independent; earlier messages are displayed locally but are not sent to the configured AI provider. Messages are lost when leaving the chat page or refreshing it.
+**Project Analysis downloads actual source at a fixed commit and runs Qlty locally in the backend container.** The trial uses built-in metrics and code-smell analysis only. It does not run repository build scripts, tests, linter plugins, or dependency installers. It does not measure coverage, issue a quality-gate verdict, or infer overall project health from a single score. Source is not sent to an AI or cloud analysis service.
+
+Chat retrieves file paths and README text from the default branch and injects them into each AI prompt. Chat does not receive scan results automatically or retrieve source-file contents, CI results, or quality metrics. Repository content is treated as untrusted data. Each request is independent; earlier messages are displayed locally but are not sent to the provider. Messages and reports are lost when leaving their page or refreshing it.
 
 GitHub activity/CI integration, SonarQube Cloud metrics, and the original microservice architecture are future work. The current application uses one Go server. Developer ranking and employee productivity measurement are outside the project scope.
 
@@ -45,7 +48,7 @@ GitHub activity/CI integration, SonarQube Cloud metrics, and the original micros
 | `/account` | Verified GitHub profile, session details, and sign-out |
 | `/settings` | Save or clear the default repository for this browser |
 | `/repositories` | Select a public/private repository or enter a public repository name |
-| `/analysis` | Choose a topic, run analysis, and view summary, findings, and recommendations |
+| `/analysis` | Run the Qlty trial and inspect measured file complexity, code smells, duplication findings, and source links |
 | `/chat` | Submit repository context and a question to the configured AI provider |
 
 The default repository stays in this browser's local storage, including after sign-out. It is not synced to an account. Query parameters supplied by Repositories or Project Analysis take precedence over this default; preparing a question does not submit it automatically.
@@ -54,7 +57,7 @@ The public homepage has no app sidebar. Its sign-up action starts the existing G
 
 ## Run with Docker
 
-For a new setup, create `backend/.env` from the supplied template and fill in the OpenRouter and GitHub credentials below. If `.env` already exists, add the missing values without overwriting it:
+For a new setup, create `backend/.env` from the supplied template and configure GitHub sign-in below. AI credentials are needed only for chat. If `.env` already exists, add missing values without overwriting it:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -77,7 +80,7 @@ From the repository root:
 docker compose up --build -d
 ```
 
-Open **http://localhost:5173/chat**. The backend is available at `http://localhost:8080`. Browser requests use relative `/api` paths; the frontend container proxies them to `http://backend:8080`.
+Open **http://localhost:5173/analysis**. The backend image installs checksum-verified Qlty CLI 0.668.0 for Linux amd64/arm64 automatically; you do not run CLI commands for each repository. The backend runs as a non-root user with a 1 GiB memory limit, two CPUs, and a 128-process limit. The backend is available at `http://localhost:8080`. Browser requests use relative `/api` paths; the frontend container proxies them to `http://backend:8080`.
 
 Vite uses port `5173` and exits if it is occupied. Free that port before starting the app. Frontend source changes reload automatically; rebuild the backend after changing Go code.
 
@@ -90,6 +93,8 @@ docker compose down
 ## Run without Docker
 
 Use Node.js 24 with npm and Go 1.26.8 or later. Configure `backend/.env` as above.
+
+For the quality trial outside Docker, install Git and the [Qlty CLI 0.668.0 release](https://github.com/qltysh/qlty/releases/tag/v0.668.0). Keep `qlty` on `PATH`, or set `QLTY_BIN=/absolute/path/to/qlty` in `backend/.env`. The server checks the exact CLI version because this trial consumes Qlty's experimental JSON metric format. Docker is the recommended way to test the integration.
 
 In one terminal, run Go from `backend/` so godotenv finds `.env`:
 
@@ -106,7 +111,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173/chat`. Vite proxies `/api` to `http://localhost:8080` for local development.
+Open `http://localhost:5173/analysis`. Vite proxies `/api` to `http://localhost:8080` for local development.
 
 ## AI Provider
 
@@ -175,17 +180,47 @@ Context uses GitHub’s [recursive tree API](https://docs.github.com/en/rest/git
 
 Errors return plain text: `400` for invalid JSON or missing input, `401` for expired GitHub access, `403` for an invalid request origin, `404` for inaccessible/missing repositories, `405` for unsupported methods, `413` for an oversized request, `503` for GitHub permission/rate-limit errors, and `502` for retrieval/provider failures, missing server credentials, or invalid AI output. Provider details stay on the server. Errors preserve the question so it can be edited and resent.
 
+## Qlty trial API
+
+`POST /api/analysis` accepts `{"repository":"owner/repository"}` (maximum 4 KiB). It verifies GitHub access with the existing server-side session, resolves the default branch to a commit SHA, downloads that commit's archive, extracts eligible source files into a temporary workspace, and runs Qlty. It scans GitHub's committed snapshot, not your local working tree. Public repositories work as a guest within GitHub's unauthenticated limits; sign in to avoid those lower limits and access private repositories.
+
+The response is a typed `QualityReport` containing the repository/branch/SHA, Qlty version, completion time, elapsed download/scan time, files supplied/excluded, per-file measurements, normalized findings with commit-pinned source links, and limitations. Findings include all related source locations, so duplication can be inspected on both sides. Totals sum file measurements only; Qlty's directory rollups are excluded to avoid double-counting.
+
+The backend runs these built-in commands using its own minimal `.qlty/qlty.toml`:
+
+```text
+qlty metrics --all --json --quiet --no-upgrade-check
+qlty smells --all --include-tests --sarif --no-snippets --quiet --no-upgrade-check
+```
+
+Qlty's metrics JSON option is experimental, so this trial pins CLI 0.668.0 and verifies its version. Metrics include code lines, functions, Qlty complexity, and cyclomatic complexity. The UI ranks files by Qlty complexity and lets you filter code smells by the actual rule IDs. These are static indicators, not a health score or proof of correctness. Rule support varies by language; unsupported/ignored/unparseable files are omitted from metric totals and the supplied/analyzed file counts remain visible. Tests are included as source, but are not executed. Coverage and quality-gate status are not measured.
+
+The scanner receives no backend credentials. Telemetry and update checks are disabled. Repository Qlty configuration, ignore files, Git metadata, symlinks/hardlinks, secret-like paths, generated/dependency directories, unsupported formats, and minified JavaScript are not used as scan input. No project builds, scripts, dependencies, linter plugins, or tests are run. The temporary snapshot is removed when the request finishes or is canceled. The backend's Git initialization uses no templates, global configuration, or system configuration. This is a bounded local trial, not a general-purpose hosted execution sandbox.
+
+Limits are 32 MiB compressed archive, 128 MiB expanded archive, 20,000 archive entries, 512 KiB per source file, 2,000 source files, and 24 MiB of retained source. Reaching the retained-source/file-count limits produces an explicitly partial report. Oversized archives are rejected. Scanner stdout is capped at 4 MiB per command; stderr at 64 KiB. All findings are validated, but at most 200 are displayed; totals and truncation remain visible. No duplication percentage is inferred from finding counts because overlapping duplicated regions can otherwise be counted twice.
+
+One scan runs at a time; another receives `429` with a retry message. The full request has a two-minute deadline, Qlty execution has a 60-second deadline, archive HTTP requests have 30-second timeouts, and the browser allows 150 seconds. Cancellation aborts the request and scanner. Input/origin errors use `400`/`403`, missing/inaccessible GitHub repositories `404`, missing scanner or GitHub rate limits `503`, unsupported/empty source sets `422`, retrieval/scanner/validation failures `502`, and scanner deadline expiry `504`. Errors preserve the repository selection for retry and do not fall back to AI-generated findings.
+
+### Evaluation and licensing
+
+This branch is `trial/qlty-quality`, based on pre-SonarQube `main` commit `deafb16`. The earlier SonarQube implementation and existing work were preserved in the named Git stash `pre-qlty: SonarQube implementation and existing WIP` (`15c41e02f9a6fb8726161f680d6029fbf6fc343d`). No adoption decision, commit, merge, or push is implied by this trial.
+
+Qlty CLI uses the [Business Source License 1.1 with an additional use grant](https://github.com/qltysh/qlty/blob/v0.668.0/LICENSE.md). Non-production evaluation is permitted, but the grant restricts using it for a commercial code-quality service or AI coding service. Confirm licensing before turning this experiment into a commercial hosted service. The container includes the CLI's license at `/opt/qlty/LICENSE.md`.
+
 ## Checks and Demo
 
 From `backend/`:
 
 ```bash
 go test ./...
+go vet ./...
 ```
 
 Tests mock GitHub and both AI providers’ HTTP transport and need no real key or paid requests. They cover input validation, private repository selection and pagination, recursive file paths and README injection, missing/oversized context, retrieval failures, the dynamic prompt and response schema, structured output, malformed provider responses, timeouts, and provider failures.
 
 OAuth tests also mock GitHub and cover PKCE, state mismatch and replay, denial, provider failures, identity validation, session rotation/expiry, cookie flags, and cross-site logout rejection. They need no GitHub credentials.
+
+Quality tests cover archive traversal/duplicate paths, links/config/secret exclusions, GitHub's PAX metadata, file-count limits, archive redirects and token isolation, metric rollups, zero findings, invalid source references, exclusive SARIF end positions, related duplication locations, subprocess credential isolation, output limits, and cancellation. Set `QLTY_TEST_BIN=/absolute/path/to/qlty` when running `go test` to include the real CLI/HTTP-handler integration check; this mocks GitHub and requires no network or AI key. The optional `TestQualityLiveRepositories` additionally requires explicitly supplied `QLTY_LIVE_REPOSITORIES` and `QLTY_LIVE_GITHUB_TOKEN`; do not put tokens in command history, logs, or Git.
 
 From `frontend/`:
 
@@ -195,7 +230,13 @@ npm run lint
 npm run build
 ```
 
-Frontend tests use Node.js's built-in test runner and cover repository-name validation and saved preferences, including blocked or invalid browser storage.
+Frontend tests use Node.js's built-in test runner and cover repository-name validation, saved preferences, report validation, missing/zero values, rule grouping, and commit-pinned source links with escaped filenames.
+
+To test the quality trial, open `/analysis`, sign in if needed, enter a repository, and choose **Scan with Qlty**. Inspect a finding's source links, compare file metrics, try rule filters, and check the scope/exclusions. Test cancellation/retry, a repository without eligible source files, and a failed request. Analysis does not require either AI key or a SonarQube mapping.
+
+Authenticated live checks on 2026-11-10 used the real Qlty 0.668.0 binary and GitHub snapshots, with both AI keys disabled: `bagiicpp/Risbo` at `1aec3f3` supplied 70 source files, returned metrics for 69 files / 12,111 code lines / 426 functions, and reported 60 findings. `bagiicpp/DevPulse` at `deafb16` returned metrics for 41 files / 4,175 code lines / 157 functions and reported 25 findings. Neither scan hit the retained-source/file-count limits. These are observations from those commits under this scan policy, not guarantees about later versions or independently verified bugs.
+
+Desktop and mobile browser checks rendered those recorded live reports and verified source links for both duplication copies, rule filters, the file table, zero/partial/invalid reports, failure/retry, cancellation, result focus, and horizontal overflow. The real CLI integration also passed inside the non-root backend container. Browser response fixtures and authenticated live backend checks were run separately; a full browser OAuth-to-live-scan flow was not tested.
 
 For a live assignment demo, open `/chat`, enter a repository name and a question, and send it. Confirm the page renders a real AI summary and any findings and recommendations. Use a real public repository such as `octocat/Hello-World` and confirm the response uses its file names and README. Sign in again with repository access to test private repositories through `/repositories` → `/analysis`. Test a failed request and verify the question remains available to retry. Live requests require a valid server-side key and provider access and may incur charges when using a paid model.
 

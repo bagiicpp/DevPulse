@@ -1,72 +1,61 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import axios from "axios"
-import { useSearchParams, Link } from "react-router"
-import { toast } from "sonner"
+import { useSearchParams } from "react-router"
+import { LoaderCircle } from "lucide-react"
 import type { AuthState } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
 import { RepositoryPicker } from "@/components/repository-picker"
-import { AnalysisResult } from "@/components/analysis-result"
+import { QualityReportView } from "@/components/quality-report"
 import { isRepositoryName, readDefaultRepository } from "@/lib/preferences"
-import { requestError, type AIResponse } from "@/lib/analysis"
-
-const topics = [
-  { label: "Overall project health", question: "Assess this project's health based on its file structure and README. Identify strengths, gaps, and practical next steps, stating what evidence is missing." },
-  { label: "CI reliability", question: "Identify CI configuration from the file names and README. Explain what is documented and what CI evidence is needed to assess reliability." },
-  { label: "Code quality", question: "Review this project's structure and documented testing practices. Identify possible gaps without assuming source-code quality or test coverage." },
-  { label: "Pull request workflow", question: "Review this project's documented contribution and pull request workflow. Suggest improvements and identify missing evidence." },
-]
+import { requestError } from "@/lib/analysis"
+import { isQualityReport, type QualityReport } from "@/lib/quality"
 
 export function ProjectAnalysis({ auth }: { auth: AuthState }) {
   const [params] = useSearchParams()
   const [repository, setRepository] = useState(() => params.get("repository") ?? readDefaultRepository())
-  const [question, setQuestion] = useState(topics[0].question)
-  const [result, setResult] = useState<AIResponse | null>(null)
+  const [result, setResult] = useState<QualityReport | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const request = useRef<AbortController | null>(null)
+  const resultHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => () => request.current?.abort(), [])
+  useEffect(() => { if (result) resultHeading.current?.focus({ preventScroll: true }) }, [result])
+
+  function cancel() {
+    request.current?.abort()
+    setLoading(false)
+    setError("Scan canceled. Your repository selection is ready to retry.")
+  }
 
   async function analyze() {
     if (loading) return
-    if (!isRepositoryName(repository.trim())) {
-      toast.error("Use the format owner/repository.")
-      return
-    }
-    setResult(null)
-    setLoading(true)
+    if (!isRepositoryName(repository.trim())) { setError("Enter a GitHub repository in the format owner/repository."); return }
+    const controller = new AbortController()
+    request.current = controller
+    setResult(null); setError(""); setLoading(true)
     try {
-      const { data } = await axios.post<AIResponse>("/api/chat", { repository: repository.trim(), question }, { timeout: 75_000 })
-      setResult(data)
+      const { data } = await axios.post<QualityReport>("/api/analysis", { repository: repository.trim() }, { timeout: 150_000, signal: controller.signal })
+      if (!isQualityReport(data)) throw new Error("The scanner returned an invalid report. Please retry.")
+      if (!controller.signal.aborted) setResult(data)
     } catch (error) {
-      toast.error(requestError(error))
-    } finally {
-      setLoading(false)
-    }
+      if (!controller.signal.aborted) setError(axios.isAxiosError(error) ? requestError(error) : error instanceof Error ? error.message : "The scan failed. Please retry.")
+    } finally { if (!controller.signal.aborted) setLoading(false) }
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 py-2 md:py-6">
+    <div className="mx-auto w-full max-w-5xl space-y-8 py-2 md:py-6">
       <header>
-        <h1 className="text-4xl leading-none font-normal tracking-[-0.04em] md:text-5xl">Project Analysis</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Analyze your repository's structure and documentation with AI.
-        </p>
+        <h1 className="text-4xl leading-tight font-normal tracking-[-0.04em] md:text-5xl">Project Analysis</h1>
+        <p className="mt-3 max-w-prose text-sm leading-6 text-muted-foreground">Try Qlty CLI on a GitHub repository. Explore code complexity, duplication findings, and other structural code smells from a fixed commit.</p>
       </header>
-      <form noValidate className="space-y-6" onSubmit={(event) => { event.preventDefault(); void analyze() }}>
-        <RepositoryPicker user={auth.user} value={repository} onChange={(value) => { setRepository(value); setResult(null) }} disabled={loading} />
-        <div className="space-y-2">
-          <label htmlFor="analysis-topic" className="text-sm font-medium">What would you like to understand?</label>
-          <select id="analysis-topic" value={question} disabled={loading} onChange={(event) => { setQuestion(event.target.value); setResult(null) }} className="h-11 w-full rounded-full border border-input bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 md:text-sm">
-            {topics.map((topic) => <option key={topic.label} value={topic.question}>{topic.label}</option>)}
-          </select>
-        </div>
-        <Button type="submit" disabled={loading || !repository.trim()}>{loading ? "Analyzing…" : "Analyze repository"}</Button>
+      <form noValidate className="space-y-5 rounded-2xl border bg-card px-5 py-6 sm:px-7" onSubmit={(event) => { event.preventDefault(); void analyze() }}>
+        <div className="max-w-2xl"><RepositoryPicker qualityScan user={auth.user} value={repository} onChange={(value) => { setRepository(value); setResult(null); setError("") }} disabled={loading} /></div>
+        <div className="flex flex-wrap items-center gap-4"><Button type="submit" disabled={loading || !repository.trim()}>{loading ? "Scanning repository…" : error ? "Retry scan" : "Scan with Qlty"}</Button>{loading && <Button type="button" variant="outline" onClick={cancel}>Cancel scan</Button>}<p className="text-xs leading-5 text-muted-foreground">Experimental · No project import · No AI key</p></div>
       </form>
-      {loading && <p role="status" className="text-sm text-muted-foreground">Reading repository context and generating analysis…</p>}
-      {result && (
-        <section aria-label="Analysis results" aria-live="polite" className="space-y-5 border-t pt-6">
-          <h2 className="text-2xl font-normal tracking-tight wrap-anywhere">Analysis for {repository.trim()}</h2>
-          <AnalysisResult response={result} />
-          <Button variant="outline" render={<Link to={`/chat?repository=${encodeURIComponent(repository.trim())}`} />} nativeButton={false}>Ask a follow-up in chat</Button>
-        </section>
-      )}
+      {error && <p role="alert" className="rounded-xl border border-destructive/30 px-5 py-4 text-sm leading-6 text-destructive">{error}</p>}
+      {loading && <div role="status" className="flex items-start gap-3 rounded-xl border bg-card p-5 text-sm leading-6"><LoaderCircle className="mt-1 size-4 shrink-0 motion-safe:animate-spin" aria-hidden="true" /><p>Downloading the selected commit and running Qlty’s built-in code analysis. This can take up to two minutes.</p></div>}
+      {result && <QualityReportView key={result.completedAt} report={result} headingRef={resultHeading} />}
+      {!result && !loading && <section className="grid gap-5 border-t pt-7 sm:grid-cols-[1fr_1.4fr] sm:gap-12" aria-label="About this trial"><h2 className="text-2xl tracking-tight">See what the scanner finds.</h2><div className="space-y-3 text-sm leading-6 text-muted-foreground"><p>This trial measures supported source files and links findings to the exact scanned code. You can inspect the per-file metrics and scan exclusions before deciding whether Qlty fits your project.</p><p>It checks structure and duplication without running your project’s code or tests. Test coverage, runtime behavior, and a quality-gate verdict are not measured.</p></div></section>}
     </div>
   )
 }
