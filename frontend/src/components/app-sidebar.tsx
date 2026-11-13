@@ -31,7 +31,7 @@ const navigation = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Repositories", href: "/repositories", icon: FolderGit2 },
   { title: "Project Analysis", href: "/analysis", icon: ChartNoAxesCombined },
-  { title: "Chat with AI", href: "/chat", icon: MessageSquare },
+  { title: "Chat with devy", href: "/chat", icon: MessageSquare },
 ]
 
 const accountNavigation = [

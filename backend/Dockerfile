@@ -28,7 +28,7 @@ RUN go mod download
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE 8080 50051
 
 USER devpulse
 

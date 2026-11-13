@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	aipb "devpulse/backend/proto"
 )
 
 func openRouterEnvelope(content string) string {
@@ -16,18 +18,19 @@ func openRouterEnvelope(content string) string {
 	return string(body)
 }
 
-func mockOpenRouter(t *testing.T, transport roundTripFunc) {
+func mockOpenRouter(t *testing.T, transport roundTripFunc) aipb.AIServiceClient {
 	t.Helper()
-	mockGemini(t, transport)
+	client := mockGemini(t, transport)
 	t.Setenv("LLM_PROVIDER", "")
 	t.Setenv("OPENROUTER_API_KEY", "openrouter-test-key")
 	t.Setenv("OPENROUTER_MODEL", "")
+	return client
 }
 
 func TestOpenRouterReturnsStructuredRepositoryAnalysis(t *testing.T) {
 	for _, model := range []string{"", "openrouter/free"} {
 		t.Run("model="+model, func(t *testing.T) {
-			mockOpenRouter(t, func(r *http.Request) (*http.Response, error) {
+			client := mockOpenRouter(t, func(r *http.Request) (*http.Response, error) {
 				if r.Method != http.MethodPost || r.URL.String() != openRouterURL || r.Header.Get("Authorization") != "Bearer openrouter-test-key" || r.Header.Get("x-goog-api-key") != "" {
 					t.Fatal("unexpected OpenRouter request")
 				}
@@ -85,7 +88,7 @@ func TestOpenRouterReturnsStructuredRepositoryAnalysis(t *testing.T) {
 			})
 			t.Setenv("OPENROUTER_MODEL", model)
 			w := httptest.NewRecorder()
-			(&authServer{}).chatHandler(w, httptest.NewRequest("POST", "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
+			(&authServer{ai: client}).chatHandler(w, httptest.NewRequest("POST", "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
 			var got ChatResponse
 			if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 				t.Fatal(err)
@@ -112,9 +115,9 @@ func TestOpenRouterRejectsInvalidResponses(t *testing.T) {
 		{"oversized response", strings.Repeat(" ", (1<<20)+1)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mockOpenRouter(t, func(*http.Request) (*http.Response, error) { return geminiReply(200, tc.body), nil })
+			client := mockOpenRouter(t, func(*http.Request) (*http.Response, error) { return geminiReply(200, tc.body), nil })
 			w := httptest.NewRecorder()
-			(&authServer{}).chatHandler(w, httptest.NewRequest("POST", "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
+			(&authServer{ai: client}).chatHandler(w, httptest.NewRequest("POST", "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
 			if w.Code != 502 || strings.Contains(w.Body.String(), "private provider details") {
 				t.Fatalf("unexpected response: %d %s", w.Code, w.Body)
 			}

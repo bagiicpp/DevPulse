@@ -1,8 +1,21 @@
 services:
+  ai:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      AI_GRPC_LISTEN: 0.0.0.0:50051
+    command: ["go", "run", ".", "-ai-service"]
+    restart: unless-stopped
+
   backend:
     build: ./backend
     env_file:
       - ./backend/.env
+    environment:
+      AI_GRPC_ADDRESS: ai:50051
+    depends_on:
+      - ai
     ports:
       - "8080:8080"
     restart: unless-stopped

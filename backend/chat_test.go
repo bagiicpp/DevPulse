@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	aipb "devpulse/backend/proto"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -18,7 +20,7 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
 }
 
-func mockGemini(t *testing.T, transport roundTripFunc) {
+func mockGemini(t *testing.T, transport roundTripFunc) aipb.AIServiceClient {
 	t.Helper()
 	t.Setenv("LLM_PROVIDER", "gemini")
 	t.Setenv("GEMINI_API_KEY", "test-key")
@@ -39,6 +41,7 @@ func mockGemini(t *testing.T, transport roundTripFunc) {
 		return transport(r)
 	})
 	t.Cleanup(func() { http.DefaultTransport = original })
+	return testAIClient(t)
 }
 
 func geminiReply(status int, body string) *http.Response {
@@ -85,7 +88,7 @@ func TestChatRejectsInvalidRequests(t *testing.T) {
 
 func TestChatReturnsStructuredResponse(t *testing.T) {
 	want := ChatResponse{Summary: "General guidance", Findings: []string{}, Recommendations: []string{"Review CI failures"}}
-	mockGemini(t, func(r *http.Request) (*http.Response, error) {
+	client := mockGemini(t, func(r *http.Request) (*http.Response, error) {
 		if r.Method != http.MethodPost || r.URL.String() != geminiURL || r.Header.Get("x-goog-api-key") != "test-key" {
 			t.Fatal("unexpected Gemini request")
 		}
@@ -102,7 +105,7 @@ func TestChatReturnsStructuredResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 		prompt := payload.Contents[0].Parts[0].Text
-		for _, text := range []string{`"repository":"owner/repo"`, "Question: How is CI?\n", "not source code", "untrusted data", "README", "src/main.go"} {
+		for _, text := range []string{"You are devy, DevPulse's assistant", `"repository":"owner/repo"`, "Question: How is CI?\n", "not source code", "untrusted data", "README", "src/main.go"} {
 			if !strings.Contains(prompt, text) {
 				t.Errorf("prompt missing %q", text)
 			}
@@ -113,7 +116,7 @@ func TestChatReturnsStructuredResponse(t *testing.T) {
 		return geminiReply(http.StatusOK, geminiEnvelope(`{"summary":"General guidance","findings":[],"recommendations":["Review CI failures"]}`)), nil
 	})
 	w := httptest.NewRecorder()
-	(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
+	(&authServer{ai: client}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":" owner/repo ","question":" How is CI? "}`)))
 	var got ChatResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
@@ -143,9 +146,9 @@ func TestChatRejectsInvalidProviderResponses(t *testing.T) {
 		{"oversized response", geminiEnvelope(`{"summary":"Help","findings":[],"recommendations":[]}`) + strings.Repeat(" ", 1<<20)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mockGemini(t, func(*http.Request) (*http.Response, error) { return geminiReply(http.StatusOK, tc.body), nil })
+			client := mockGemini(t, func(*http.Request) (*http.Response, error) { return geminiReply(http.StatusOK, tc.body), nil })
 			w := httptest.NewRecorder()
-			(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
+			(&authServer{ai: client}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
 			if w.Code != http.StatusBadGateway {
 				t.Fatalf("status = %d, want 502: %s", w.Code, w.Body.String())
 			}
@@ -165,14 +168,14 @@ func TestChatHandlesProviderFailures(t *testing.T) {
 		{"timeout", 0, context.DeadlineExceeded},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mockGemini(t, func(*http.Request) (*http.Response, error) {
+			client := mockGemini(t, func(*http.Request) (*http.Response, error) {
 				if tc.err != nil {
 					return nil, tc.err
 				}
 				return geminiReply(tc.status, "private provider details"), nil
 			})
 			w := httptest.NewRecorder()
-			(&authServer{}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
+			(&authServer{ai: client}).chatHandler(w, httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(`{"repository":"owner/repo","question":"Help"}`)))
 			if w.Code != http.StatusBadGateway || strings.Contains(w.Body.String(), "private provider details") {
 				t.Fatalf("unexpected failure response: %d %s", w.Code, w.Body.String())
 			}

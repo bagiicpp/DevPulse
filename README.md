@@ -1,14 +1,14 @@
 # DevPulse
 
-DevPulse is a university project assessing **software-project health**. Its long-term goal is to combine development activity from GitHub with code-quality metrics from SonarQube Cloud into an explainable assessment.
+DevPulse is a university project assessing **software-project health**. It uses Qlty CLI for code-quality metrics and findings, with GitHub development activity planned for a broader, explainable assessment.
 
-This branch evaluates **Qlty CLI for on-demand code quality**: select a GitHub repository, capture its default-branch commit, scan supported source files on the backend, and inspect measured complexity and structural/duplication findings. No Qlty Cloud account, SonarQube project import, or AI key is needed for this scan. The separate chat retains the dynamic LLM assignment flow.
+DevPulse uses **Qlty CLI for on-demand code quality**: select a GitHub repository, capture its default-branch commit, scan supported source files on the backend, and inspect measured complexity and structural/duplication findings. No cloud analysis account or AI key is needed for this scan. The separate chat retains the dynamic LLM assignment flow.
 
 ## Current Application
 
 - React, TypeScript, and Vite frontend with Tailwind v4 and Neutral shadcn components.
 - A Go HTTP server exposing `POST /api/chat` and the Qlty trial endpoint `POST /api/analysis`.
-- A dynamic prompt and JSON response schema sent to the configured AI provider. The server deserializes and validates the response before returning it to React.
+- A separate Go gRPC AI service. The HTTP backend calls its generated client stub with repository context and a question; the service builds the dynamic prompt and deserializes and validates the provider's JSON response.
 - Loading feedback, Sonner notifications for errors and confirmations, and preserved input for retry after failure.
 - Lucide sidebar icons, accessible labels, and a header toggle on desktop and mobile.
 - A standalone public homepage at `/`, with GitHub sign-up leading into the app at `/dashboard`.
@@ -21,13 +21,14 @@ This branch evaluates **Qlty CLI for on-demand code quality**: select a GitHub r
 
 Chat retrieves file paths and README text from the default branch and injects them into each AI prompt. Chat does not receive scan results automatically or retrieve source-file contents, CI results, or quality metrics. Repository content is treated as untrusted data. Each request is independent; earlier messages are displayed locally but are not sent to the provider. Messages and reports are lost when leaving their page or refreshing it.
 
-GitHub activity/CI integration, SonarQube Cloud metrics, and the original microservice architecture are future work. The current application uses one Go server. Developer ranking and employee productivity measurement are outside the project scope.
+GitHub activity/CI integration is future work. The current application runs a Go HTTP API and a Go gRPC AI service. Developer ranking and employee productivity measurement are outside the project scope.
 
 ## Repository Structure
 
 ```text
 .
-├── backend/        # Go API, LLM integration, and tests
+├── backend/        # Go HTTP API, gRPC AI service, and tests
+│   └── proto/      # AI service contract and generated Go message/client/server code
 ├── frontend/       # React/TypeScript application
 ├── n0/             # Project proposal and architecture diagram
 ├── n1/             # XML processing assignment
@@ -49,9 +50,11 @@ GitHub activity/CI integration, SonarQube Cloud metrics, and the original micros
 | `/settings` | Save or clear the default repository for this browser |
 | `/repositories` | Select a public/private repository or enter a public repository name |
 | `/analysis` | Run the Qlty trial and inspect measured file complexity, code smells, duplication findings, and source links |
-| `/chat` | Submit repository context and a question to the configured AI provider |
+| `/chat` | Ask devy about a repository using the configured AI provider |
 
 The default repository stays in this browser's local storage, including after sign-out. It is not synced to an account. Query parameters supplied by Repositories or Project Analysis take precedence over this default; preparing a question does not submit it automatically.
+
+In chat, press **Enter** to send or **Shift+Enter** for a new line. Enter during IME composition does not submit. Devy's completed response appears word by word across the summary, findings, and recommendations, finishing within six seconds. Choose **Show full response** to skip the reveal; reduced-motion preferences show the full response immediately. This is a display animation after the gRPC response arrives, not provider token streaming. Failed requests keep the question available to retry.
 
 The public homepage has no app sidebar. Its sign-up action starts the existing GitHub OAuth flow directly; after authorization, the server redirects to Dashboard. Signed-in visitors see **Open workspace** instead. The homepage uses a short CSS entrance sequence with stationary content for reduced-motion preferences. Guest access remains available through login and the homepage's AI chat link.
 
@@ -82,7 +85,9 @@ docker compose up --build -d
 
 Open **http://localhost:5173/analysis**. The backend image installs checksum-verified Qlty CLI 0.668.0 for Linux amd64/arm64 automatically; you do not run CLI commands for each repository. The backend runs as a non-root user with a 1 GiB memory limit, two CPUs, and a 128-process limit. The backend is available at `http://localhost:8080`. Browser requests use relative `/api` paths; the frontend container proxies them to `http://backend:8080`.
 
-Vite uses port `5173` and exits if it is occupied. Free that port before starting the app. Frontend source changes reload automatically; rebuild the backend after changing Go code.
+Compose also starts `ai` from the same Go image with `-ai-service`. The HTTP backend connects to `ai:50051`; the gRPC port is available inside the Compose network and is not published to the host. Both Go processes read the existing environment file. AI provider calls run only in the `ai` process; GitHub retrieval and sessions stay in `backend`.
+
+Vite uses port `5173` and exits if it is occupied. Free that port before starting the app. Frontend source changes reload automatically; rebuild both Go services after changing Go code: `docker compose up -d --build ai backend`.
 
 To stop the containers:
 
@@ -96,14 +101,21 @@ Use Node.js 24 with npm and Go 1.26.8 or later. Configure `backend/.env` as abov
 
 For the quality trial outside Docker, install Git and the [Qlty CLI 0.668.0 release](https://github.com/qltysh/qlty/releases/tag/v0.668.0). Keep `qlty` on `PATH`, or set `QLTY_BIN=/absolute/path/to/qlty` in `backend/.env`. The server checks the exact CLI version because this trial consumes Qlty's experimental JSON metric format. Docker is the recommended way to test the integration.
 
-In one terminal, run Go from `backend/` so godotenv finds `.env`:
+In one terminal, start the AI service from `backend/` so godotenv finds `.env`:
+
+```bash
+cd backend
+go run . -ai-service
+```
+
+In a second terminal, start the HTTP API:
 
 ```bash
 cd backend
 go run .
 ```
 
-In a second terminal:
+In a third terminal:
 
 ```bash
 cd frontend
@@ -112,6 +124,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173/analysis`. Vite proxies `/api` to `http://localhost:8080` for local development.
+
+The local gRPC listener and client both default to `127.0.0.1:50051`. Set `AI_GRPC_LISTEN` on the AI service and `AI_GRPC_ADDRESS` on the HTTP API to change them. Compose supplies its own container addresses. Project Analysis and authentication remain available if the AI service is unavailable; chat returns a retryable error.
 
 ## AI Provider
 
@@ -125,7 +139,37 @@ OpenRouter generation disables optional reasoning and limits output to 2,048 tok
 
 Gemini remains available for the original assignment flow. To use it, set `LLM_PROVIDER=gemini` and configure `GEMINI_API_KEY`. Supported provider values are `openrouter` and `gemini`; a missing key or unknown provider is a configuration error.
 
-After changing environment variables, restart a local Go server or run `docker compose up -d --build backend`. Restarting the backend clears in-memory GitHub sessions. Both providers receive the same file-name/README context and return the same validated summary, findings, and recommendations.
+After changing AI environment variables, restart the local AI service or run `docker compose up -d --build ai`. Restarting the HTTP backend clears in-memory GitHub sessions. Both providers receive the same file-name/README context and return the same validated summary, findings, and recommendations.
+
+## gRPC Assignment
+
+Chat uses this request path:
+
+```text
+React → HTTP/JSON → Go API → gRPC/Protobuf → Go AI service → provider HTTPS API
+```
+
+[`backend/proto/ai.proto`](backend/proto/ai.proto) defines the unary `devpulse.ai.v1.AIService.Analyze` RPC. The request carries a question and typed repository context: repository name, branch/ref, file paths, README, and truncation flags. The response carries a summary, findings, and recommendations. Each protobuf field has a stable numeric identifier.
+
+`ai.pb.go` contains the generated message types and serialization support; `ai_grpc.pb.go` contains the client stub and server interface. [`backend/ai.go`](backend/ai.go) implements that interface and the HTTP backend's gRPC client. [`backend/llm.go`](backend/llm.go) retains prompt construction, provider HTTPS calls, and JSON deserialization and validation. Both startup modes share the same Go package but run as separate processes.
+
+The HTTP API validates browser input and retrieves GitHub context before invoking the RPC. GitHub tokens and AI keys are not included in protobuf messages. The AI service validates the RPC input and caps received messages at 256 KiB. Repository context retains the existing 1,000-file, 64 KiB of paths, and 64 KiB README limits. The RPC has a 35-second deadline, bounded by any earlier caller deadline; the provider HTTP request keeps its 30-second timeout. Cancellation propagates through gRPC to the provider request. Responses are capped at 1 MiB. Provider failures return a generic gRPC `Internal` status; HTTP chat errors retain the existing `502` retry message.
+
+Protobuf repeated fields decode to empty lists when absent. The HTTP adapter restores empty JSON arrays so the React response contract remains unchanged. There is no direct-provider fallback when gRPC is unavailable.
+
+This coursework setup uses plaintext gRPC on loopback or the private Compose network. Add TLS and service authentication before exposing the service outside that environment.
+
+Generated Go files are checked in, so normal builds need no protobuf compiler. To regenerate after editing the contract, install `protoc` 33.0 and run from `backend/` with the Go binary directory on `PATH`:
+
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+export PATH="$(go env GOPATH)/bin:$PATH"
+protoc --go_out=. --go_opt=paths=source_relative \
+  --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/ai.proto
+```
+
+For a course demo, start all three Compose services and submit a question on `/chat`. Trace the request through `chatHandler` → generated `Analyze` client → `aiServer.Analyze` → `askAI`, then inspect the structured response in React. Stop `ai` with `docker compose stop ai` and send another question to demonstrate the error path; restart it with `docker compose start ai` and retry. This implements one unary RPC; streaming is outside this assignment's current scope.
 
 ## GitHub Sign-In
 
@@ -174,7 +218,7 @@ Example response shape (illustrative guidance):
 }
 ```
 
-A successful response always has a nonblank `summary` and `findings` and `recommendations` arrays of nonblank strings. Arrays may be empty. AI requests time out after 30 seconds, and provider responses are limited to 1 MiB. GitHub requests time out after 10 seconds each. The browser request times out after 75 seconds to allow for repository retrieval and generation.
+A successful response always has a nonblank `summary` and `findings` and `recommendations` arrays of nonblank strings. Arrays may be empty. Provider requests time out after 30 seconds, and provider responses are limited to 1 MiB. The gRPC call has a 35-second deadline. GitHub requests time out after 10 seconds each. The browser request times out after 75 seconds to allow for repository retrieval and generation.
 
 Context uses GitHub’s [recursive tree API](https://docs.github.com/en/rest/git/trees#get-a-tree) and [README API](https://docs.github.com/en/rest/repos/contents#get-a-repository-readme). Prompts include up to 1,000 file paths, at most 64 KiB of path text, and 64 KiB of README text. Truncation is passed to the model; it must state limitations. GitHub JSON responses are capped at 8 MiB. Retrieval failures stop generation rather than falling back to invented repository findings.
 
@@ -203,7 +247,7 @@ One scan runs at a time; another receives `429` with a retry message. The full r
 
 ### Evaluation and licensing
 
-This branch is `trial/qlty-quality`, based on pre-SonarQube `main` commit `deafb16`. The earlier SonarQube implementation and existing work were preserved in the named Git stash `pre-qlty: SonarQube implementation and existing WIP` (`15c41e02f9a6fb8726161f680d6029fbf6fc343d`). No adoption decision, commit, merge, or push is implied by this trial.
+Qlty CLI is DevPulse's current code-quality engine. The integration uses bounded source snapshots and its built-in structural rules; its limits remain visible in each report.
 
 Qlty CLI uses the [Business Source License 1.1 with an additional use grant](https://github.com/qltysh/qlty/blob/v0.668.0/LICENSE.md). Non-production evaluation is permitted, but the grant restricts using it for a commercial code-quality service or AI coding service. Confirm licensing before turning this experiment into a commercial hosted service. The container includes the CLI's license at `/opt/qlty/LICENSE.md`.
 
@@ -213,10 +257,13 @@ From `backend/`:
 
 ```bash
 go test ./...
+go test -race ./...
 go vet ./...
 ```
 
 Tests mock GitHub and both AI providers’ HTTP transport and need no real key or paid requests. They cover input validation, private repository selection and pagination, recursive file paths and README injection, missing/oversized context, retrieval failures, the dynamic prompt and response schema, structured output, malformed provider responses, timeouts, and provider failures.
+
+Chat tests exercise the HTTP handler through a real gRPC server and generated stubs over an in-memory connection. Additional RPC tests cover input/message limits, preserved context flags, empty JSON arrays, cancellation and deadline propagation to the provider, and an unavailable service. They need no separately running AI process.
 
 OAuth tests also mock GitHub and cover PKCE, state mismatch and replay, denial, provider failures, identity validation, session rotation/expiry, cookie flags, and cross-site logout rejection. They need no GitHub credentials.
 
@@ -230,9 +277,9 @@ npm run lint
 npm run build
 ```
 
-Frontend tests use Node.js's built-in test runner and cover repository-name validation, saved preferences, report validation, missing/zero values, rule grouping, and commit-pinned source links with escaped filenames.
+Frontend tests use Node.js's built-in test runner and cover repository-name validation, saved preferences, report validation, missing/zero values, rule grouping, commit-pinned source links with escaped filenames, and ordered word reveal with preserved whitespace and Unicode.
 
-To test the quality trial, open `/analysis`, sign in if needed, enter a repository, and choose **Scan with Qlty**. Inspect a finding's source links, compare file metrics, try rule filters, and check the scope/exclusions. Test cancellation/retry, a repository without eligible source files, and a failed request. Analysis does not require either AI key or a SonarQube mapping.
+To test the quality trial, open `/analysis`, sign in if needed, enter a repository, and choose **Scan with Qlty**. Inspect a finding's source links, compare file metrics, try rule filters, and check the scope/exclusions. Test cancellation/retry, a repository without eligible source files, and a failed request. Analysis does not require an AI key or cloud project mapping.
 
 Authenticated live checks on 2026-11-10 used the real Qlty 0.668.0 binary and GitHub snapshots, with both AI keys disabled: `bagiicpp/Risbo` at `1aec3f3` supplied 70 source files, returned metrics for 69 files / 12,111 code lines / 426 functions, and reported 60 findings. `bagiicpp/DevPulse` at `deafb16` returned metrics for 41 files / 4,175 code lines / 157 functions and reported 25 findings. Neither scan hit the retained-source/file-count limits. These are observations from those commits under this scan policy, not guarantees about later versions or independently verified bugs.
 
@@ -260,7 +307,7 @@ A standalone Python application that demonstrates:
 - Interactive filtering by test coverage and CI status
 - Exporting filtered results to JSON and XML
 
-The application uses simulated data based on the planned GitHub and SonarQube Cloud integrations.
+The application uses simulated project, CI, and quality-report data from the original proposal.
 
 **Run the application:**
 
@@ -323,13 +370,14 @@ The application loads the local `data/ict.px` file on startup and displays inter
 
 ## Technologies
 
-- **Go** – current HTTP API and LLM integration
+- **Go** – HTTP API and gRPC AI service
+- **gRPC / Protocol Buffers** – typed AI service contract, generated stubs, and binary request/response serialization
 - **React / TypeScript / Vite** – current application frontend
 - **Tailwind CSS / shadcn** – current UI styling and components
 - **OpenRouter / Gemini API** – structured AI guidance
 - **Python** – XML processing assignment
 - **GitHub REST API** – repository selection, file paths, and README retrieval; activity and CI/CD data remain planned
-- **SonarQube Cloud API** – planned code-quality metrics
+- **Qlty CLI** – source-code metrics and structural/duplication findings
 - **XML / JSON** – structured data formats
 - **HTML / CSS / JavaScript** – interactive data visualization
 - **Chart.js** – statistical charts

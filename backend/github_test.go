@@ -143,6 +143,7 @@ func TestFetchRepositoryContext(t *testing.T) {
 
 func TestChatUsesPrivateRepositoryContext(t *testing.T) {
 	a, mux := testAuth(t)
+	a.ai = testAIClient(t)
 	a.sessions["valid"] = userSession{token: "private-token", expires: time.Now().Add(time.Hour)}
 	t.Setenv("LLM_PROVIDER", "gemini")
 	t.Setenv("GEMINI_API_KEY", "test-key")
