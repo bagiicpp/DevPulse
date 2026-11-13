@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package devpulse.ai.v1;
+
+option go_package = "devpulse/backend/proto;aipb";
+
+service AIService {
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+}
+
+message RepositoryContext {
+  string repository = 1;
+  string ref = 2;
+  repeated string files = 3;
+  bool files_truncated = 4;
+  string readme = 5;
+  bool readme_truncated = 6;
+}
+
+message AnalyzeRequest {
+  RepositoryContext context = 1;
+  string question = 2;
+}
+
+message AnalyzeResponse {
+  string summary = 1;
+  repeated string findings = 2;
+  repeated string recommendations = 3;
+}

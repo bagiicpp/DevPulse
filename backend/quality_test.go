@@ -262,7 +262,7 @@ func TestQualityRealCLIAndAIIndependence(t *testing.T) {
 
 func TestQualitySubprocessDoesNotInheritSecretsAndIsBounded(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "secret-model-key")
-	t.Setenv("SONAR_TOKEN", "secret-sonar-key")
+	t.Setenv("GITHUB_CLIENT_SECRET", "secret-github-key")
 	body, err := qualityCommand(context.Background(), t.TempDir(), "env")
 	if err != nil || strings.Contains(string(body), "secret-") || !strings.Contains(string(body), "QLTY_TELEMETRY=off") {
 		t.Fatalf("unsafe scanner environment: %v", err)

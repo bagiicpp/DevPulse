@@ -86,8 +86,12 @@ export function Settings() {
             <dd className="text-muted-foreground">Not connected</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-3 py-4">
-            <dt>SonarQube Cloud</dt>
-            <dd className="text-muted-foreground">Not connected</dd>
+            <dt>Qlty CLI</dt>
+            <dd>
+              <Link to="/analysis" className="underline underline-offset-4">
+                Run a quality scan
+              </Link>
+            </dd>
           </div>
         </dl>
       </section>

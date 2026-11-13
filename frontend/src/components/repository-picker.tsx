@@ -4,6 +4,7 @@ import { Link } from "react-router"
 import type { GitHubUser } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { requestError } from "@/lib/analysis"
 
 type Repository = { full_name: string; private: boolean }
@@ -20,6 +21,7 @@ export function RepositoryPicker({ user, value, onChange, disabled = false, qual
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const items = repositories.map((repo) => ({ value: repo.full_name, label: `${repo.full_name}${repo.private ? " (private)" : ""}` }))
 
   const load = useCallback((page: number, signal?: AbortSignal) => {
     return axios.get<Repository[]>("/api/repositories", {
@@ -51,20 +53,21 @@ export function RepositoryPicker({ user, value, onChange, disabled = false, qual
       {user ? (
         <div className="space-y-2">
           <label htmlFor="your-repositories" className="text-sm font-medium">Your GitHub repositories</label>
-          <select
-            id="your-repositories"
-            value={repositories.some((repo) => repo.full_name === value) ? value : ""}
-            onChange={(event) => onChange(event.target.value)}
-            disabled={disabled || loading}
-            className="h-11 w-full min-w-0 rounded-full border border-input bg-card px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 md:text-sm"
+          <Select
+            items={items}
+            value={repositories.some((repo) => repo.full_name === value) ? value : null}
+            onValueChange={(value) => { if (value !== null) onChange(value) }}
+            disabled={disabled || loading || repositories.length === 0}
           >
-            <option value="" disabled>{loading ? "Loading repositories…" : "Select a repository"}</option>
-            {repositories.map((repo) => (
-              <option key={repo.full_name} value={repo.full_name}>
-                {repo.full_name}{repo.private ? " (private)" : ""}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="your-repositories" className="w-full min-w-0 rounded-full bg-card px-4 text-base data-[size=default]:h-11 md:text-sm">
+              <SelectValue className="min-w-0 truncate" placeholder={loading ? "Loading repositories…" : "Select a repository"} />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false} className="max-h-[min(20rem,var(--available-height))]">
+              <SelectGroup>
+                {items.map((item) => <SelectItem key={item.value} value={item.value}><span className="truncate">{item.label}</span></SelectItem>)}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           {loading && <p role="status" className="text-sm text-muted-foreground">Loading repositories…</p>}
           {!loading && !error && page > 0 && repositories.length === 0 && (
             <p className="text-sm text-muted-foreground">No repositories available. Try a public repository below or sign in again to grant access.</p>
@@ -86,7 +89,7 @@ export function RepositoryPicker({ user, value, onChange, disabled = false, qual
         <Input id="repository" placeholder="owner/repository" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} maxLength={140} required />
       </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        {qualityScan ? "Qlty scans supported source files from the default branch. No SonarQube setup or AI provider is required." : "File names and README content from this repository will be sent to the AI provider for analysis. Source file contents and live CI metrics are not included."}
+        {qualityScan ? "Qlty scans supported source files from the default branch without an AI provider or cloud analysis account." : "File names and README content from this repository will be sent to the AI provider for analysis. Source file contents and live CI metrics are not included."}
       </p>
     </div>
   )

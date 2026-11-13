@@ -3,11 +3,14 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	aipb "devpulse/backend/proto"
 
 	"github.com/joho/godotenv"
 )
@@ -65,7 +68,7 @@ func (a *authServer) chatHandler(w http.ResponseWriter, r *http.Request) {
 		writeGitHubError(w, err)
 		return
 	}
-	response, err := askAI(
+	response, err := a.analyze(
 		r.Context(),
 		repository,
 		request.Question,
@@ -89,8 +92,16 @@ func (a *authServer) chatHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	aiService := flag.Bool("ai-service", false, "Run the AI gRPC service instead of the HTTP API")
+	flag.Parse()
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
+	}
+	if *aiService {
+		if err := serveAI(); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	port := os.Getenv("PORT")
@@ -103,6 +114,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	connection, err := newAIClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer connection.Close()
+	auth.ai = aipb.NewAIServiceClient(connection)
 	auth.register(mux)
 
 	log.Printf("DevPulse backend running on http://localhost:%s", port)

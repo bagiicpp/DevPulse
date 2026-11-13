@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	aipb "devpulse/backend/proto"
 )
 
 const sessionCookie = "devpulse_session"
@@ -41,6 +43,7 @@ type userSession struct {
 
 type authServer struct {
 	origin, clientID, clientSecret string
+	ai                             aipb.AIServiceClient
 	mu                             sync.Mutex
 	// shortcut: sessions live in one server's memory, use shared storage before running multiple instances.
 	attempts map[string]loginAttempt

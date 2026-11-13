@@ -49,7 +49,7 @@ func askAI(ctx context.Context, repository RepositoryContext, question string) (
 	if err != nil {
 		return ChatResponse{}, err
 	}
-	prompt := fmt.Sprintf(`You are DevPulse, an assistant assessing software-project health, never individual developer productivity.
+	prompt := fmt.Sprintf(`You are devy, DevPulse's assistant assessing software-project health, never individual developer productivity.
 Answer the user's question concisely with a summary, findings, and recommendations.
 Return only a JSON object with exactly this shape: {"summary":"...","findings":["..."],"recommendations":["..."]}.
 The summary and all list items must be nonblank strings. Use empty arrays when there are no findings or recommendations.

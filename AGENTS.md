@@ -4,7 +4,7 @@
 
 DevPulse is a university project assessing **software-project health**, not individual developer productivity. Keep the implementation small and understandable for coursework. Prioritize the user's current request and assignment over the roadmap.
 
-GitHub activity/CI data and SonarQube Cloud quality metrics are future integrations. Add integrations, services, scoring, authentication, deployment infrastructure, or vulnerability scanning only when requested. Developer ranking and employee productivity measurement are outside the project scope.
+Qlty CLI supplies on-demand code-quality metrics and findings. GitHub activity/CI data remain a future integration. Add integrations, services, scoring, authentication, deployment infrastructure, or vulnerability scanning only when requested. Developer ranking and employee productivity measurement are outside the project scope.
 
 Historical coursework in `n0/`, `n1/`, `n2/`, and `n3/` stays untouched unless explicitly requested.
 
@@ -18,7 +18,8 @@ Historical coursework in `n0/`, `n1/`, `n2/`, and `n3/` stays untouched unless e
 
 ## Frontend conventions
 
-- Preserve the React/TypeScript/Vite frontend, Tailwind v4, and Neutral `base-nova` shadcn components. Reuse established components before introducing custom equivalents.
+- Preserve the React/TypeScript/Vite frontend, Tailwind v4, and Neutral `base-nova` shadcn components.
+- Build every UI component from shadcn/ui primitives, including buttons, inputs, dropdowns, selects, comboboxes, menus, dialogs, tooltips, cards, and tables. Reuse existing generated components; generate any missing shadcn component before implementing the feature. Raw HTML is for semantic content/layout and generated component internals, not substitutes for shadcn controls such as native `<select>` dropdowns. Replace native/custom equivalents when modifying the affected UI.
 - Use Axios with relative `/api` paths, React Router for navigation, and Sonner for notifications.
 - When composing shadcn controls, inspect their generated APIs: `base-nova` does not imply Radix-style `asChild` support. Keep interactive elements from nesting inside other interactive elements.
 - Before generating shadcn components, verify TypeScript and Vite resolve `@/*` to `src/*`. Generated UI files belong in `frontend/src/components/ui/`; a previous alias error created a literal `frontend/@/` directory.
@@ -26,7 +27,7 @@ Historical coursework in `n0/`, `n1/`, `n2/`, and `n3/` stays untouched unless e
 ## UI choices to preserve
 
 - Minimalist, light/Neutral styling with Noto Serif branding.
-- Text-only sidebar navigation: Dashboard, Repositories, Project Analysis, Chat with AI, Settings.
+- Text-only sidebar navigation: Dashboard, Repositories, Project Analysis, Chat with devy, Settings.
 - Italic “DevPulse” branding without a logo. Keep the collapse/expand control inside the sidebar header as its only icon.
 - Keep Dashboard in its own component; unimplemented routes may remain placeholders.
 

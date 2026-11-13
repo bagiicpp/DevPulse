@@ -1,5 +1,7 @@
 import { useState, type RefObject } from "react"
+import { ChevronDownIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { findingCounts, ruleLabel, sourceLink, type QualityReport } from "@/lib/quality"
 
 function count(value: number) { return value.toLocaleString() }
@@ -54,9 +56,15 @@ export function QualityReportView({ report, headingRef }: { report: QualityRepor
         {report.totalFindings === 0 && <p className="mt-4 text-sm leading-6 text-muted-foreground">Qlty reported no code smells under this scan policy. This does not establish that the project is bug-free or fully tested.</p>}
       </section>
 
-      <details className="border-t px-5 py-5 sm:px-8"><summary className="cursor-pointer rounded py-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">File measurements ({report.files.length})</summary>
+      <Collapsible className="border-t px-5 py-5 sm:px-8">
+        <CollapsibleTrigger render={<Button type="button" variant="ghost" className="group w-full justify-between px-0 hover:bg-transparent" />}>
+          File measurements ({report.files.length})
+          <ChevronDownIcon aria-hidden="true" className="size-4 transition-transform duration-200 group-data-panel-open:rotate-180 motion-reduce:transition-none" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
         <div className="mt-4 max-h-96 overflow-auto rounded border"><table className="w-full text-left text-xs"><caption className="sr-only">Qlty measurements for every analyzed file</caption><thead className="bg-muted"><tr>{["File", "Language", "Code lines", "Functions", "Qlty complexity", "Cyclomatic"].map((label) => <th key={label} className="px-3 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{report.files.map((file) => <tr className="border-t" key={file.path}><td className="px-3 py-3 wrap-anywhere"><a className="underline underline-offset-4" href={sourceLink(report, file.path)} target="_blank" rel="noreferrer">{file.path}</a></td><td className="px-3">{file.language.replace("LANGUAGE_", "").toLowerCase()}</td>{[file.codeLines, file.functions, file.complexity, file.cyclomatic].map((value, i) => <td className="px-3 tabular-nums" key={i}>{count(value)}</td>)}</tr>)}</tbody></table></div>
-      </details>
+        </CollapsibleContent>
+      </Collapsible>
 
       <section className="border-t px-5 py-6 sm:px-8" aria-labelledby="quality-scope"><h3 id="quality-scope" className="text-lg font-medium">Scan scope & limitations</h3>
         <p className="mt-3 text-sm text-muted-foreground">{report.inputFiles} source files supplied · {report.skippedFiles} archive files excluded · {report.durationSeconds.toFixed(1)} seconds</p>
